@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Khảo sát: Thói quen sử dụng hội nhóm Facebook</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Be Vietnam Pro', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    .fade-in { animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    input[type="radio"]:checked + .option-card,
+    input[type="checkbox"]:checked + .option-card {
+      border-color: #2563eb;
+      background-color: #eff6ff;
+      color: #1e40af;
+    }
+    input[type="radio"]:checked + .scale-btn {
+      background-color: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Header & Thanh tiến độ -->
+  <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">FB</div>
+        <div>
+          <h1 class="text-sm font-bold text-slate-900 leading-tight">Khảo sát Hội nhóm Facebook</h1>
+          <p class="text-xs text-slate-500" id="step-indicator">Phần 1 / 3 • Thông tin chung</p>
+        </div>
+      </div>
+      <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full" id="progress-text">33%</span>
+    </div>
+    <div class="w-full bg-slate-100 h-1.5">
+      <div id="progress-bar" class="bg-blue-600 h-1.5 transition-all duration-300" style="width: 33.3%"></div>
+    </div>
+  </header>
+
+  <!-- Nội dung chính -->
+  <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-6 sm:py-8">
+    <!-- Banner giới thiệu -->
+    <div id="intro-card" class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 mb-6 shadow-sm">
+      <span class="inline-block text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md mb-2">Nghiên cứu hành vi sinh viên</span>
+      <h2 class="text-lg sm:text-xl font-bold text-slate-900 mb-2">Thói quen sử dụng và nhận thức thông tin trên các hội nhóm Facebook</h2>
+      <p class="text-sm text-slate-600 leading-relaxed">
+        Chào bạn, khảo sát này nhằm tìm hiểu thói quen tham gia các hội nhóm trên Facebook cũng như trải nghiệm của sinh viên đối với nguồn thông tin trên nền tảng này. Mọi câu trả lời đều được bảo mật và chỉ phục vụ mục đích nghiên cứu (~2 phút).
+      </p>
+    </div>
+
+    <!-- Form khảo sát -->
+    <form id="survey-form" novalidate>
+      <div id="questions-container" class="space-y-5 fade-in"></div>
+
+      <!-- Thông báo lỗi -->
+      <div id="error-banner" class="hidden mt-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+        Vui lòng hoàn thành tất cả các câu hỏi bắt buộc trước khi tiếp tục.
+      </div>
+
+      <!-- Nút điều hướng -->
+      <div class="mt-7 flex items-center justify-between gap-3">
+        <button type="button" id="btn-prev" class="hidden px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
+          ← Quay lại
+        </button>
+        <div class="flex-1"></div>
+        <button type="button" id="btn-next" class="px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-sm transition">
+          Tiếp theo →
+        </button>
+        <button type="submit" id="btn-submit" class="hidden px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-sm transition flex items-center gap-2">
+          <span id="submit-text">Gửi khảo sát</span>
+          <svg id="submit-spinner" class="hidden animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </button>
+      </div>
+    </form>
+
+    <!-- Màn hình hoàn thành -->
+    <div id="success-screen" class="hidden bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 text-center shadow-sm fade-in">
+      <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">✓</div>
+      <h2 class="text-xl font-bold text-slate-900 mb-2">Cảm ơn bạn đã hoàn thành khảo sát!</h2>
+      <p class="text-sm text-slate-600 mb-6">Câu trả lời của bạn đã được ghi nhận thành công vào hệ thống nghiên cứu.</p>
+
+      <div id="quick-insight" class="text-left bg-slate-50 rounded-xl p-4 border border-slate-200 mb-6 text-sm text-slate-700 space-y-1.5"></div>
+
+      <button type="button" onclick="location.reload()" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
+        Gửi phản hồi khác
+      </button>
+    </div>
+  </main>
+
+  <script>
+    // =========================================================================
+    // DÁN ĐƯỜNG LINK WEB APP TỪ GOOGLE APPS SCRIPT VÀO DÒNG DƯỚI ĐÂY:
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlCWumyQiM0B761MLYsG3BjUpt_m6gDl2rmWT-vZwKfG1s7sxBTu9Nh4lKRg-JhaAN/exec/';
+    // =========================================================================
+
+    const SECTIONS = [
+      {
+        title: 'Phần 1 / 3 • Thông tin chung',
+        questions: [
+          {
+            id: 'q1', type: 'radio',
+            title: '1. Bạn hiện đang là sinh viên năm thứ mấy?',
+            options: ['Năm 1', 'Năm 2', 'Năm 3', 'Năm 4', 'Sau đại học (Cao học / Nghiên cứu sinh)']
+          },
+          {
+            id: 'q2', type: 'radio',
+            title: '2. Giới tính của bạn là gì?',
+            options: ['Nam', 'Nữ', 'Khác / Không muốn tiết lộ']
+          }
+        ]
+      },
+      {
+        title: 'Phần 2 / 3 • Thói quen sử dụng hội nhóm',
+        questions: [
+          {
+            id: 'q3', type: 'radio',
+            title: '3. Bạn hiện đang tham gia khoảng bao nhiêu hội nhóm trên Facebook?',
+            options: ['Dưới 3 nhóm', 'Từ 3 – 5 nhóm', 'Từ 6 – 10 nhóm', 'Trên 10 nhóm']
+          },
+          {
+            id: 'q4', type: 'radio',
+            title: '4. Trung bình mỗi ngày, bạn dành bao nhiêu thời gian để lướt/xem nội dung trong các hội nhóm?',
+            options: ['Dưới 15 phút', 'Từ 15 – 30 phút', 'Từ 30 – 60 phút', 'Từ 1 – 2 giờ', 'Trên 2 giờ']
+          },
+          {
+            id: 'q5', type: 'checkbox',
+            title: '5. Bạn thường truy cập các hội nhóm vào khung giờ nào trong ngày? (Chọn nhiều)',
+            options: ['Sáng (6h – 11h)', 'Trưa (11h – 14h)', 'Chiều (14h – 18h)', 'Tối (18h – 23h)', 'Khuya (Sau 23h)']
+          },
+          {
+            id: 'q6', type: 'checkbox', hasOther: true,
+            title: '6. Mục đích chính khi bạn tham gia các hội nhóm là gì? (Chọn nhiều)',
+            options: [
+              'Học tập / Trao đổi tài liệu',
+              'Tìm kiếm việc làm / Thực tập',
+              'Mua bán / Trao đổi đồ dùng',
+              'Giải trí / Hóng tin tức',
+              'Kết bạn / Giao lưu cộng đồng',
+              'Cập nhật thông tin trường lớp / chuyên ngành'
+            ]
+          },
+          {
+            id: 'q7', type: 'scale',
+            title: '7. Bạn có cảm thấy mình đang lãng phí thời gian khi lướt các hội nhóm không?',
+            minLabel: 'Hoàn toàn không', maxLabel: 'Rất thường xuyên'
+          }
+        ]
+      },
+      {
+        title: 'Phần 3 / 3 • Trải nghiệm thông tin & Giải pháp',
+        questions: [
+          {
+            id: 'q8', type: 'scale',
+            title: '8. Tần suất bạn bắt gặp thông tin sai lệch / tin giả trong các hội nhóm là bao nhiêu?',
+            minLabel: 'Hiếm khi', maxLabel: 'Rất thường xuyên'
+          },
+          {
+            id: 'q9', type: 'checkbox',
+            title: '9. Những vấn đề nào bạn thường gặp nhất khi sử dụng hội nhóm? (Chọn nhiều)',
+            options: [
+              'Lãng phí thời gian, khó dứt ra được',
+              'Thông tin sai lệch, chưa được kiểm chứng',
+              'Bình luận tiêu cực, công kích lẫn nhau',
+              'Nhiễu thông tin, khó tìm lại bài viết hữu ích',
+              'Quá nhiều bài quảng cáo / Seeding',
+              'Lừa đảo (tuyển dụng ảo, bán hàng giả,...)'
+            ]
+          },
+          {
+            id: 'q10', type: 'radio',
+            title: '10. Bạn đã từng tin hoặc chia sẻ nhầm thông tin sai lệch từ hội nhóm chưa?',
+            options: ['Có, đã từng', 'Chưa bao giờ', 'Không chắc chắn']
+          },
+          {
+            id: 'q11', type: 'radio',
+            title: '11. Bạn có đang áp dụng công cụ hay quy tắc nào để tự kiểm soát thời gian lướt hội nhóm không?',
+            options: ['Có, và sử dụng thường xuyên', 'Có, nhưng ít khi tuân thủ', 'Chưa từng áp dụng bao giờ']
+          },
+          {
+            id: 'q12', type: 'radio',
+            title: '12. Bạn có biết cách kiểm chứng độ xác thực của thông tin trước khi tin hoặc chia sẻ không?',
+            options: ['Biết rõ và thực hiện thường xuyên', 'Biết một chút nhưng chưa thành thạo', 'Chưa biết cách kiểm chứng']
+          },
+          {
+            id: 'q13', type: 'checkbox',
+            title: '13. Điều gì khiến bạn khó từ bỏ thói quen lướt hội nhóm? (Chọn nhiều)',
+            options: [
+              'Nội dung cuốn hút, đánh trúng tâm lý',
+              'Hội chứng sợ bỏ lỡ (FOMO) tin tức/drama',
+              'Thói quen vô thức mỗi khi cầm điện thoại',
+              'Cần giải tỏa căng thẳng (Stress)',
+              'Không có hoạt động thay thế thú vị hơn'
+            ]
+          },
+          {
+            id: 'q14', type: 'scale',
+            title: '14. Nếu có một bộ quy tắc hoặc checklist giúp sử dụng hội nhóm hiệu quả và an toàn hơn, bạn sẵn sàng áp dụng ở mức độ nào?',
+            minLabel: 'Hoàn toàn không sẵn sàng', maxLabel: 'Rất sẵn sàng'
+          },
+          {
+            id: 'q15', type: 'radio',
+            title: '15. Bạn mong muốn giải pháp hỗ trợ nào nhất trong số các gợi ý dưới đây?',
+            options: [
+              'Bộ quy tắc tự quản lý thời gian cá nhân',
+              'Checklist hướng dẫn kiểm chứng thông tin nhanh',
+              'Kế hoạch phân bổ thời gian biểu hợp lý',
+              'Ứng dụng / Tiện ích (Extension) hỗ trợ giới hạn thời gian',
+              'Chiến dịch truyền thông nâng cao nhận thức trong sinh viên'
+            ]
+          }
+        ]
+      }
+    ];
+
+    let currentStep = 0;
+    const answers = {};
+
+    const container = document.getElementById('questions-container');
+    const stepIndicator = document.getElementById('step-indicator');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnSubmit = document.getElementById('btn-submit');
+    const errorBanner = document.getElementById('error-banner');
+
+    function renderStep() {
+      const section = SECTIONS[currentStep];
+      const pct = Math.round(((currentStep + 1) / SECTIONS.length) * 100);
+      stepIndicator.textContent = section.title;
+      progressBar.style.width = `${pct}%`;
+      progressText.textContent = `${pct}%`;
+
+      btnPrev.classList.toggle('hidden', currentStep === 0);
+      btnNext.classList.toggle('hidden', currentStep === SECTIONS.length - 1);
+      btnSubmit.classList.toggle('hidden', currentStep !== SECTIONS.length - 1);
+      errorBanner.classList.add('hidden');
+
+      container.innerHTML = section.questions.map(q => {
+        let inputHTML = '';
+
+        if (q.type === 'radio' || q.type === 'checkbox') {
+          inputHTML = `<div class="space-y-2.5 mt-3">` + q.options.map((opt, idx) => {
+            const isChecked = q.type === 'radio'
+              ? answers[q.id] === opt
+              : Array.isArray(answers[q.id]) && answers[q.id].includes(opt);
+            return `
+              <label class="block cursor-pointer">
+                <input type="${q.type}" name="${q.id}" value="${opt}" class="sr-only" ${isChecked ? 'checked' : ''} onchange="handleInput('${q.id}', '${q.type}', this)">
+                <div class="option-card flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-blue-300 transition text-sm font-medium">
+                  <span class="w-4 h-4 flex-shrink-0 border border-slate-400 ${q.type === 'radio' ? 'rounded-full' : 'rounded'} flex items-center justify-center text-[10px]">
+                    ${isChecked ? '●' : ''}
+                  </span>
+                  <span>${opt}</span>
+                </div>
+              </label>
+            `;
+          }).join('');
+
+          if (q.hasOther) {
+            const otherVal = answers[q.id + '_other'] || '';
+            inputHTML += `
+              <div class="pt-1">
+                <input type="text" placeholder="Mục khác (nhập nếu có)..." value="${otherVal}"
+                  oninput="answers['${q.id}_other'] = this.value"
+                  class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
+              </div>
+            `;
+          }
+          inputHTML += `</div>`;
+        } else if (q.type === 'scale') {
+          inputHTML = `
+            <div class="mt-4">
+              <div class="grid grid-cols-5 gap-2 sm:gap-3">
+                ${[1, 2, 3, 4, 5].map(num => {
+                  const isChecked = Number(answers[q.id]) === num;
+                  return `
+                    <label class="cursor-pointer text-center">
+                      <input type="radio" name="${q.id}" value="${num}" class="sr-only" ${isChecked ? 'checked' : ''} onchange="handleInput('${q.id}', 'scale', this)">
+                      <div class="scale-btn py-3 rounded-xl border border-slate-200 font-bold text-sm hover:border-blue-400 transition">
+                        ${num}
+                      </div>
+                    </label>
+                  `;
+                }).join('')}
+              </div>
+              <div class="flex justify-between text-xs text-slate-500 mt-2 px-1">
+                <span>1 = ${q.minLabel}</span>
+                <span>5 = ${q.maxLabel}</span>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div id="card-${q.id}" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm transition">
+            <h3 class="text-sm sm:text-base font-semibold text-slate-900 leading-snug">
+              ${q.title} <span class="text-red-500">*</span>
+            </h3>
+            ${inputHTML}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function handleInput(qId, type, el) {
+      if (type === 'radio' || type === 'scale') {
+        answers[qId] = el.value;
+      } else if (type === 'checkbox') {
+        if (!Array.isArray(answers[qId])) answers[qId] = [];
+        if (el.checked) {
+          if (!answers[qId].includes(el.value)) answers[qId].push(el.value);
+        } else {
+          answers[qId] = answers[qId].filter(v => v !== el.value);
+        }
+      }
+      document.getElementById(`card-${qId}`).classList.remove('border-red-400', 'bg-red-50/30');
+      renderStep();
+    }
+
+    function validateCurrentStep() {
+      const section = SECTIONS[currentStep];
+      let valid = true;
+      for (const q of section.questions) {
+        const val = answers[q.id];
+        const other = answers[q.id + '_other'];
+        const isEmpty = q.type === 'checkbox'
+          ? (!Array.isArray(val) || val.length === 0) && (!other || !other.trim())
+          : !val;
+
+        const card = document.getElementById(`card-${q.id}`);
+        if (isEmpty) {
+          card.classList.add('border-red-400', 'bg-red-50/30');
+          valid = false;
+        } else {
+          card.classList.remove('border-red-400', 'bg-red-50/30');
+        }
+      }
+      errorBanner.classList.toggle('hidden', valid);
+      return valid;
+    }
+
+    btnNext.addEventListener('click', () => {
+      if (validateCurrentStep()) {
+        currentStep++;
+        renderStep();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+
+    btnPrev.addEventListener('click', () => {
+      currentStep--;
+      renderStep();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('survey-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!validateCurrentStep()) return;
+
+      // Gộp mục "Khác" ở Câu 6 nếu có nhập
+      const payload = { ...answers };
+      if (payload.q6_other && payload.q6_other.trim()) {
+        payload.q6 = [...(payload.q6 || []), `Khác: ${payload.q6_other.trim()}`];
+      }
+
+      const submitBtn = document.getElementById('btn-submit');
+      const submitText = document.getElementById('submit-text');
+      const spinner = document.getElementById('submit-spinner');
+
+      submitBtn.disabled = true;
+      submitText.textContent = 'Đang gửi dữ liệu...';
+      spinner.classList.remove('hidden');
+
+      try {
+        if (SCRIPT_URL && SCRIPT_URL.startsWith('https://')) {
+          await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        // Hiển thị màn hình cảm ơn
+        document.getElementById('survey-form').classList.add('hidden');
+        document.getElementById('intro-card').classList.add('hidden');
+        document.getElementById('success-screen').classList.remove('hidden');
+
+        document.getElementById('quick-insight').innerHTML = `
+          <p class="font-semibold text-slate-900">Tóm tắt nhanh phản hồi của bạn:</p>
+          <p>• Thời lượng sử dụng: <strong>${payload.q4}</strong> (${payload.q3})</p>
+          <p>• Mức độ cảm thấy lãng phí thời gian: <strong>${payload.q7}/5</strong></p>
+          <p>• Tần suất gặp tin sai lệch: <strong>${payload.q8}/5</strong></p>
+        `;
+      } catch (err) {
+        alert('Có lỗi kết nối mạng, vui lòng thử bấm gửi lại nhé!');
+        submitBtn.disabled = false;
+        submitText.textContent = 'Gửi khảo sát';
+        spinner.classList.add('hidden');
+      }
+    });
+
+    renderStep();
+  </script>
+</body>
+</html>
