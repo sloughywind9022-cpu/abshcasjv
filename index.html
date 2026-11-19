@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Khảo sát: Thói quen sử dụng hội nhóm Facebook</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Thư viện xuất file Excel (.xlsx) trực tiếp trên trình duyệt -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Be Vietnam Pro', sans-serif; background-color: #f8fafc; color: #0f172a; }
@@ -26,9 +28,9 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-  <!-- Header & Thanh tiến độ -->
+  <!-- Header -->
   <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200">
-    <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
+    <div class="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">FB</div>
         <div>
@@ -36,16 +38,17 @@
           <p class="text-xs text-slate-500" id="step-indicator">Phần 1 / 3 • Thông tin chung</p>
         </div>
       </div>
-      <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full" id="progress-text">33%</span>
+      <div id="header-right">
+        <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full" id="progress-text">33%</span>
+      </div>
     </div>
-    <div class="w-full bg-slate-100 h-1.5">
+    <div id="progress-wrapper" class="w-full bg-slate-100 h-1.5">
       <div id="progress-bar" class="bg-blue-600 h-1.5 transition-all duration-300" style="width: 33.3%"></div>
     </div>
   </header>
 
-  <!-- Nội dung chính -->
-  <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-6 sm:py-8">
-    <!-- Banner giới thiệu -->
+  <!-- GIAO DIỆN 1: FORM KHẢO SÁT CHO NGƯỜI DÙNG -->
+  <main id="survey-view" class="flex-1 max-w-2xl w-full mx-auto px-4 py-6 sm:py-8">
     <div id="intro-card" class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 mb-6 shadow-sm">
       <span class="inline-block text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md mb-2">Nghiên cứu hành vi sinh viên</span>
       <h2 class="text-lg sm:text-xl font-bold text-slate-900 mb-2">Thói quen sử dụng và nhận thức thông tin trên các hội nhóm Facebook</h2>
@@ -54,16 +57,13 @@
       </p>
     </div>
 
-    <!-- Form khảo sát -->
     <form id="survey-form" novalidate>
       <div id="questions-container" class="space-y-5 fade-in"></div>
 
-      <!-- Thông báo lỗi -->
       <div id="error-banner" class="hidden mt-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
         Vui lòng hoàn thành tất cả các câu hỏi bắt buộc trước khi tiếp tục.
       </div>
 
-      <!-- Nút điều hướng -->
       <div class="mt-7 flex items-center justify-between gap-3">
         <button type="button" id="btn-prev" class="hidden px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
           ← Quay lại
@@ -82,7 +82,6 @@
       </div>
     </form>
 
-    <!-- Màn hình hoàn thành -->
     <div id="success-screen" class="hidden bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 text-center shadow-sm fade-in">
       <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">✓</div>
       <h2 class="text-xl font-bold text-slate-900 mb-2">Cảm ơn bạn đã hoàn thành khảo sát!</h2>
@@ -96,10 +95,90 @@
     </div>
   </main>
 
+  <!-- GIAO DIỆN 2: DASHBOARD ADMIN (?admin=1) -->
+  <main id="admin-view" class="hidden flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:py-8 fade-in">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+      <div>
+        <span class="inline-block text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-md mb-1">Chế độ Quản trị viên</span>
+        <h2 class="text-lg font-bold text-slate-900">Thống kê dữ liệu khảo sát trực tuyến</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Đồng bộ trực tiếp từ Google Sheets</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="loadAdminData()" class="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition">
+          ↻ Làm mới
+        </button>
+        <button onclick="exportToExcel()" id="btn-export-xlsx" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 shadow-sm transition flex items-center gap-1.5">
+          <span>📥 Xuất file Excel (.xlsx)</span>
+        </button>
+        <a href="?" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition">
+          Về Form
+        </a>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="admin-loading" class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+      <div class="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3"></div>
+      <p class="text-sm font-medium text-slate-600">Đang tải dữ liệu từ Google Sheets...</p>
+    </div>
+
+    <!-- Nội dung thống kê -->
+    <div id="admin-content" class="hidden space-y-6">
+      <!-- Thẻ tổng quan -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500 font-medium">Tổng số phản hồi</p>
+          <p class="text-2xl font-bold text-blue-600 mt-1" id="stat-total">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500 font-medium">TB Lãng phí thời gian</p>
+          <p class="text-2xl font-bold text-amber-600 mt-1" id="stat-q7">0 / 5</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500 font-medium">TB Gặp tin giả</p>
+          <p class="text-2xl font-bold text-rose-600 mt-1" id="stat-q8">0 / 5</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500 font-medium">TB Sẵn sàng áp dụng</p>
+          <p class="text-2xl font-bold text-emerald-600 mt-1" id="stat-q14">0 / 5</p>
+        </div>
+      </div>
+
+      <!-- Biểu đồ từng câu hỏi -->
+      <div id="charts-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+      <!-- Bảng dữ liệu thô mới nhất -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-900">Dữ liệu chi tiết gần nhất</h3>
+          <span class="text-xs text-slate-500" id="table-count">0 bản ghi</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                <th class="p-3 font-semibold whitespace-nowrap">Thời gian</th>
+                <th class="p-3 font-semibold whitespace-nowrap">Năm học</th>
+                <th class="p-3 font-semibold whitespace-nowrap">Giới tính</th>
+                <th class="p-3 font-semibold whitespace-nowrap">Số nhóm</th>
+                <th class="p-3 font-semibold whitespace-nowrap">Thời lượng</th>
+                <th class="p-3 font-semibold whitespace-nowrap">Lãng phí</th>
+                <th class="p-3 font-semibold whitespace-nowrap">Tin giả</th>
+                <th class="p-3 font-semibold whitespace-nowrap">Sẵn sàng</th>
+                <th class="p-3 font-semibold whitespace-nowrap">Giải pháp chọn</th>
+              </tr>
+            </thead>
+            <tbody id="raw-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
   <script>
     // =========================================================================
-    // DÁN ĐƯỜNG LINK WEB APP TỪ GOOGLE APPS SCRIPT VÀO DÒNG DƯỚI ĐÂY:
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlCWumyQiM0B761MLYsG3BjUpt_m6gDl2rmWT-vZwKfG1s7sxBTu9Nh4lKRg-JhaAN/exec/';
+    // DÁN ĐƯỜNG LINK WEB APP TỪ GOOGLE APPS SCRIPT (KẾT THÚC BẰNG /exec) VÀO ĐÂY:
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlCWumyQiM0B761MLYsG3BjUpt_m6gDl2rmWT-vZwKfG1s7sxBTu9Nh4lKRg-JhaAN/exec';
     // =========================================================================
 
     const SECTIONS = [
@@ -221,35 +300,106 @@
       }
     ];
 
+    // Kiểm tra chế độ Admin qua URL (?admin=1)
+    const isAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
+    let fetchedRows = [];
+
+    if (isAdmin) {
+      document.getElementById('survey-view').classList.add('hidden');
+      document.getElementById('progress-wrapper').classList.add('hidden');
+      document.getElementById('header-right').innerHTML = `<span class="text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full">Admin Dashboard</span>`;
+      document.getElementById('step-indicator').textContent = 'Bảng tổng hợp & Xuất Excel';
+      document.getElementById('admin-view').classList.remove('hidden');
+      loadAdminData();
+    } else {
+      initSurvey();
+    }
+
+    // ==================== LOGIC FORM KHẢO SÁT ====================
     let currentStep = 0;
     const answers = {};
 
-    const container = document.getElementById('questions-container');
-    const stepIndicator = document.getElementById('step-indicator');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    const btnPrev = document.getElementById('btn-prev');
-    const btnNext = document.getElementById('btn-next');
-    const btnSubmit = document.getElementById('btn-submit');
-    const errorBanner = document.getElementById('error-banner');
+    function initSurvey() {
+      renderStep();
+
+      document.getElementById('btn-next').addEventListener('click', () => {
+        if (validateCurrentStep()) {
+          currentStep++;
+          renderStep();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+
+      document.getElementById('btn-prev').addEventListener('click', () => {
+        currentStep--;
+        renderStep();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      document.getElementById('survey-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!validateCurrentStep()) return;
+
+        const payload = { ...answers };
+        if (payload.q6_other && payload.q6_other.trim()) {
+          payload.q6 = [...(payload.q6 || []), `Khác: ${payload.q6_other.trim()}`];
+        }
+
+        const submitBtn = document.getElementById('btn-submit');
+        const submitText = document.getElementById('submit-text');
+        const spinner = document.getElementById('submit-spinner');
+
+        submitBtn.disabled = true;
+        submitText.textContent = 'Đang gửi dữ liệu...';
+        spinner.classList.remove('hidden');
+
+        try {
+          if (SCRIPT_URL && SCRIPT_URL.startsWith('https://')) {
+            await fetch(SCRIPT_URL, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify(payload)
+            });
+          }
+
+          document.getElementById('survey-form').classList.add('hidden');
+          document.getElementById('intro-card').classList.add('hidden');
+          document.getElementById('success-screen').classList.remove('hidden');
+
+          document.getElementById('quick-insight').innerHTML = `
+            <p class="font-semibold text-slate-900">Tóm tắt nhanh phản hồi của bạn:</p>
+            <p>• Thời lượng sử dụng: <strong>${payload.q4}</strong> (${payload.q3})</p>
+            <p>• Mức độ cảm thấy lãng phí thời gian: <strong>${payload.q7}/5</strong></p>
+            <p>• Tần suất gặp tin sai lệch: <strong>${payload.q8}/5</strong></p>
+          `;
+        } catch (err) {
+          alert('Có lỗi kết nối mạng, vui lòng thử bấm gửi lại nhé!');
+          submitBtn.disabled = false;
+          submitText.textContent = 'Gửi khảo sát';
+          spinner.classList.add('hidden');
+        }
+      });
+    }
 
     function renderStep() {
       const section = SECTIONS[currentStep];
       const pct = Math.round(((currentStep + 1) / SECTIONS.length) * 100);
-      stepIndicator.textContent = section.title;
-      progressBar.style.width = `${pct}%`;
-      progressText.textContent = `${pct}%`;
+      document.getElementById('step-indicator').textContent = section.title;
+      document.getElementById('progress-bar').style.width = `${pct}%`;
+      document.getElementById('progress-text').textContent = `${pct}%`;
 
-      btnPrev.classList.toggle('hidden', currentStep === 0);
-      btnNext.classList.toggle('hidden', currentStep === SECTIONS.length - 1);
-      btnSubmit.classList.toggle('hidden', currentStep !== SECTIONS.length - 1);
-      errorBanner.classList.add('hidden');
+      document.getElementById('btn-prev').classList.toggle('hidden', currentStep === 0);
+      document.getElementById('btn-next').classList.toggle('hidden', currentStep === SECTIONS.length - 1);
+      document.getElementById('btn-submit').classList.toggle('hidden', currentStep !== SECTIONS.length - 1);
+      document.getElementById('error-banner').classList.add('hidden');
 
+      const container = document.getElementById('questions-container');
       container.innerHTML = section.questions.map(q => {
         let inputHTML = '';
 
         if (q.type === 'radio' || q.type === 'checkbox') {
-          inputHTML = `<div class="space-y-2.5 mt-3">` + q.options.map((opt, idx) => {
+          inputHTML = `<div class="space-y-2.5 mt-3">` + q.options.map(opt => {
             const isChecked = q.type === 'radio'
               ? answers[q.id] === opt
               : Array.isArray(answers[q.id]) && answers[q.id].includes(opt);
@@ -345,72 +495,150 @@
           card.classList.remove('border-red-400', 'bg-red-50/30');
         }
       }
-      errorBanner.classList.toggle('hidden', valid);
+      document.getElementById('error-banner').classList.toggle('hidden', valid);
       return valid;
     }
 
-    btnNext.addEventListener('click', () => {
-      if (validateCurrentStep()) {
-        currentStep++;
-        renderStep();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    });
-
-    btnPrev.addEventListener('click', () => {
-      currentStep--;
-      renderStep();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    document.getElementById('survey-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!validateCurrentStep()) return;
-
-      // Gộp mục "Khác" ở Câu 6 nếu có nhập
-      const payload = { ...answers };
-      if (payload.q6_other && payload.q6_other.trim()) {
-        payload.q6 = [...(payload.q6 || []), `Khác: ${payload.q6_other.trim()}`];
-      }
-
-      const submitBtn = document.getElementById('btn-submit');
-      const submitText = document.getElementById('submit-text');
-      const spinner = document.getElementById('submit-spinner');
-
-      submitBtn.disabled = true;
-      submitText.textContent = 'Đang gửi dữ liệu...';
-      spinner.classList.remove('hidden');
+    // ==================== LOGIC ADMIN & XUẤT EXCEL ====================
+    async function loadAdminData() {
+      const loadingEl = document.getElementById('admin-loading');
+      const contentEl = document.getElementById('admin-content');
+      loadingEl.classList.remove('hidden');
+      contentEl.classList.add('hidden');
 
       try {
-        if (SCRIPT_URL && SCRIPT_URL.startsWith('https://')) {
-          await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(payload)
-          });
+        const res = await fetch(SCRIPT_URL);
+        const json = await res.json();
+        fetchedRows = json.data || [];
+        renderDashboard(fetchedRows);
+        loadingEl.classList.add('hidden');
+        contentEl.classList.remove('hidden');
+      } catch (err) {
+        loadingEl.innerHTML = `
+          <p class="text-sm font-semibold text-red-600 mb-2">Không tải được dữ liệu từ Google Sheets!</p>
+          <p class="text-xs text-slate-500">Hãy kiểm tra xem bạn đã cập nhật hàm <code>doGet(e)</code> và chọn <b>New version</b> khi Deploy Apps Script chưa nhé.</p>
+        `;
+      }
+    }
+
+    function calcAvg(rows, key) {
+      if (!rows.length) return '0.0';
+      const valid = rows.map(r => Number(r[key])).filter(n => !isNaN(n) && n > 0);
+      if (!valid.length) return '0.0';
+      return (valid.reduce((a, b) => a + b, 0) / valid.length).toFixed(1);
+    }
+
+    function renderDashboard(rows) {
+      document.getElementById('stat-total').textContent = rows.length;
+      document.getElementById('stat-q7').textContent = `${calcAvg(rows, 'q7')} / 5`;
+      document.getElementById('stat-q8').textContent = `${calcAvg(rows, 'q8')} / 5`;
+      document.getElementById('stat-q14').textContent = `${calcAvg(rows, 'q14')} / 5`;
+      document.getElementById('table-count').textContent = `${rows.length} bản ghi`;
+
+      // Render biểu đồ thanh ngang cho toàn bộ 15 câu
+      const allQuestions = SECTIONS.flatMap(s => s.questions);
+      const chartsContainer = document.getElementById('charts-container');
+
+      chartsContainer.innerHTML = allQuestions.map(q => {
+        const counts = {};
+        if (q.type === 'scale') {
+          ['1', '2', '3', '4', '5'].forEach(k => counts[k] = 0);
+        } else {
+          q.options.forEach(opt => counts[opt] = 0);
         }
 
-        // Hiển thị màn hình cảm ơn
-        document.getElementById('survey-form').classList.add('hidden');
-        document.getElementById('intro-card').classList.add('hidden');
-        document.getElementById('success-screen').classList.remove('hidden');
+        rows.forEach(r => {
+          const raw = r[q.id];
+          if (!raw) return;
+          if (q.type === 'checkbox') {
+            raw.split('; ').forEach(item => {
+              const clean = item.trim();
+              if (clean) counts[clean] = (counts[clean] || 0) + 1;
+            });
+          } else {
+            counts[raw] = (counts[raw] || 0) + 1;
+          }
+        });
 
-        document.getElementById('quick-insight').innerHTML = `
-          <p class="font-semibold text-slate-900">Tóm tắt nhanh phản hồi của bạn:</p>
-          <p>• Thời lượng sử dụng: <strong>${payload.q4}</strong> (${payload.q3})</p>
-          <p>• Mức độ cảm thấy lãng phí thời gian: <strong>${payload.q7}/5</strong></p>
-          <p>• Tần suất gặp tin sai lệch: <strong>${payload.q8}/5</strong></p>
+        const barsHTML = Object.entries(counts).map(([label, count]) => {
+          const pct = rows.length ? Math.round((count / rows.length) * 100) : 0;
+          const displayLabel = q.type === 'scale' ? `Mức ${label}` : label;
+          return `
+            <div>
+              <div class="flex justify-between text-xs mb-1 gap-2">
+                <span class="text-slate-700 font-medium truncate" title="${displayLabel}">${displayLabel}</span>
+                <span class="text-slate-500 font-semibold whitespace-nowrap">${count} (${pct}%)</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <h4 class="text-xs font-bold text-slate-900 mb-3.5 leading-relaxed">${q.title}</h4>
+            <div class="space-y-2.5">${barsHTML}</div>
+          </div>
         `;
-      } catch (err) {
-        alert('Có lỗi kết nối mạng, vui lòng thử bấm gửi lại nhé!');
-        submitBtn.disabled = false;
-        submitText.textContent = 'Gửi khảo sát';
-        spinner.classList.add('hidden');
-      }
-    });
+      }).join('');
 
-    renderStep();
+      // Render bảng dữ liệu mới nhất (đảo ngược để mới nhất lên đầu)
+      const tbody = document.getElementById('raw-table-body');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">Chưa có dữ liệu nào được gửi.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = [...rows].reverse().slice(0, 30).map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-3 whitespace-nowrap text-slate-500">${r.timestamp}</td>
+          <td class="p-3 whitespace-nowrap font-medium">${r.q1}</td>
+          <td class="p-3 whitespace-nowrap">${r.q2}</td>
+          <td class="p-3 whitespace-nowrap">${r.q3}</td>
+          <td class="p-3 whitespace-nowrap">${r.q4}</td>
+          <td class="p-3 whitespace-nowrap text-center font-semibold text-amber-600">${r.q7}</td>
+          <td class="p-3 whitespace-nowrap text-center font-semibold text-rose-600">${r.q8}</td>
+          <td class="p-3 whitespace-nowrap text-center font-semibold text-emerald-600">${r.q14}</td>
+          <td class="p-3 max-w-[200px] truncate" title="${r.q15}">${r.q15}</td>
+        </tr>
+      `).join('');
+    }
+
+    function exportToExcel() {
+      if (!fetchedRows.length) {
+        alert('Chưa có dữ liệu để xuất file Excel!');
+        return;
+      }
+
+      const excelData = fetchedRows.map((r, index) => ({
+        'STT': index + 1,
+        'Thời gian gửi': r.timestamp,
+        'Câu 1: Năm học': r.q1,
+        'Câu 2: Giới tính': r.q2,
+        'Câu 3: Số nhóm tham gia': r.q3,
+        'Câu 4: Thời gian/ngày': r.q4,
+        'Câu 5: Khung giờ': r.q5,
+        'Câu 6: Mục đích': r.q6,
+        'Câu 7: Lãng phí thời gian (1-5)': Number(r.q7) || r.q7,
+        'Câu 8: Tần suất gặp tin giả (1-5)': Number(r.q8) || r.q8,
+        'Câu 9: Vấn đề thường gặp': r.q9,
+        'Câu 10: Từng tin tin giả': r.q10,
+        'Câu 11: Công cụ quản lý': r.q11,
+        'Câu 12: Biết kiểm chứng': r.q12,
+        'Câu 13: Lý do khó bỏ': r.q13,
+        'Câu 14: Mức độ sẵn sàng (1-5)': Number(r.q14) || r.q14,
+        'Câu 15: Giải pháp mong muốn': r.q15
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Du_Lieu_Khao_Sat');
+
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `Khao_Sat_Hoi_Nhom_FB_${today}.xlsx`);
+    }
   </script>
 </body>
 </html>
