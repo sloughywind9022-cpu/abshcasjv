@@ -1,179 +1,244 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Khảo sát: Thói quen sử dụng hội nhóm Facebook</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khảo sát: Thói quen sử dụng và nhận thức thông tin trên hội nhóm Facebook</title>
+  <!-- Tải Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Thư viện xuất file Excel (.xlsx) trực tiếp trên trình duyệt -->
+  <!-- Thư viện SheetJS xuất file Excel (.xlsx) trực tiếp -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Be Vietnam Pro', sans-serif; background-color: #f8fafc; color: #0f172a; }
-    .fade-in { animation: fadeIn 0.25s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    input[type="radio"]:checked + .option-card,
-    input[type="checkbox"]:checked + .option-card {
-      border-color: #2563eb;
-      background-color: #eff6ff;
-      color: #1e40af;
+  <!-- Font chữ Inter chuẩn Google -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            fb: {
+              50: '#eef4ff',
+              100: '#d9e6ff',
+              500: '#1877F2',
+              600: '#166fe5',
+              700: '#1158b8',
+            }
+          }
+        }
+      }
     }
-    input[type="radio"]:checked + .scale-btn {
-      background-color: #2563eb;
-      color: #ffffff;
-      border-color: #2563eb;
-      transform: scale(1.05);
-    }
-  </style>
+  </script>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="bg-[#F0F2F5] text-slate-800 antialiased min-h-screen flex flex-col">
 
-  <!-- Header -->
-  <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200">
-    <div class="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+  <!-- Thanh điều hướng trên cùng (Sticky Header) -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">FB</div>
+        <div class="w-9 h-9 rounded-xl bg-fb-500 text-white flex items-center justify-center shadow-sm">
+          <i class="fa-brands fa-facebook-f text-lg"></i>
+        </div>
         <div>
-          <h1 class="text-sm font-bold text-slate-900 leading-tight">Khảo sát Hội nhóm Facebook</h1>
-          <p class="text-xs text-slate-500" id="step-indicator">Phần 1 / 3 • Thông tin chung</p>
+          <h1 class="text-sm sm:text-base font-bold text-slate-900 leading-tight">Khảo sát Sinh viên</h1>
+          <p class="text-xs text-slate-500 hidden sm:block">Hành vi sử dụng & Nhận thức thông tin</p>
         </div>
       </div>
-      <div id="header-right">
-        <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full" id="progress-text">33%</span>
+
+      <!-- Chuyển đổi chế độ Điền Form / Xem Thống kê (Chỉ hiện tab Thống kê khi có ?admin=1) -->
+      <div id="admin-nav-tabs" class="hidden bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+        <button id="tab-form-btn" onclick="switchTab('form')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white text-fb-600 shadow-sm">
+          <i class="fa-regular fa-pen-to-square mr-1.5"></i>Điền khảo sát
+        </button>
+        <button id="tab-stats-btn" onclick="switchTab('stats')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Thống kê</span>
+          <span id="response-badge" class="bg-fb-100 text-fb-700 text-[11px] font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
       </div>
     </div>
-    <div id="progress-wrapper" class="w-full bg-slate-100 h-1.5">
-      <div id="progress-bar" class="bg-blue-600 h-1.5 transition-all duration-300" style="width: 33.3%"></div>
+
+    <!-- Thanh tiến độ (Progress Bar) chỉ hiện ở tab Điền khảo sát -->
+    <div id="progress-container" class="w-full bg-slate-200 h-1.5 overflow-hidden">
+      <div id="progress-bar" class="bg-fb-500 h-full transition-all duration-300 ease-out" style="width: 0%;"></div>
     </div>
   </header>
 
-  <!-- GIAO DIỆN 1: FORM KHẢO SÁT CHO NGƯỜI DÙNG -->
-  <main id="survey-view" class="flex-1 max-w-2xl w-full mx-auto px-4 py-6 sm:py-8">
-    <div id="intro-card" class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 mb-6 shadow-sm">
-      <span class="inline-block text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md mb-2">Nghiên cứu hành vi sinh viên</span>
-      <h2 class="text-lg sm:text-xl font-bold text-slate-900 mb-2">Thói quen sử dụng và nhận thức thông tin trên các hội nhóm Facebook</h2>
-      <p class="text-sm text-slate-600 leading-relaxed">
-        Chào bạn, khảo sát này nhằm tìm hiểu thói quen tham gia các hội nhóm trên Facebook cũng như trải nghiệm của sinh viên đối với nguồn thông tin trên nền tảng này. Mọi câu trả lời đều được bảo mật và chỉ phục vụ mục đích nghiên cứu (~2 phút).
-      </p>
+  <!-- Vùng thông báo Toast -->
+  <div id="toast-box" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none max-w-sm w-full px-4 sm:px-0">
+    <div id="toast-content" class="bg-slate-900 text-white px-4 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700">
+      <i id="toast-icon" class="fa-solid fa-circle-info text-fb-500 text-lg"></i>
+      <p id="toast-msg" class="text-sm font-medium leading-snug"></p>
     </div>
+  </div>
 
-    <form id="survey-form" novalidate>
-      <div id="questions-container" class="space-y-5 fade-in"></div>
+  <!-- NỘI DUNG CHÍNH -->
+  <main class="flex-grow max-w-3xl w-full mx-auto px-4 py-6 sm:py-8">
 
-      <div id="error-banner" class="hidden mt-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
-        Vui lòng hoàn thành tất cả các câu hỏi bắt buộc trước khi tiếp tục.
+    <!-- ========================================== -->
+    <!-- VIEW 1: BIỂU MẪU KHẢO SÁT                  -->
+    <!-- ========================================== -->
+    <section id="view-form" class="space-y-5">
+      
+      <!-- Card Tiêu đề chính -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="h-3 bg-gradient-to-r from-fb-500 via-indigo-500 to-blue-600"></div>
+        <div class="p-6 sm:p-8">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-fb-50 text-fb-700 text-xs font-semibold mb-3">
+            <i class="fa-solid fa-shield-halved"></i> Bảo mật & Ẩn danh 100%
+          </div>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900 mb-3 leading-snug">
+            Khảo sát: Thói quen sử dụng và nhận thức thông tin trên các hội nhóm Facebook
+          </h2>
+          <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+            Chào bạn, khảo sát này nhằm tìm hiểu thói quen tham gia các hội nhóm trên Facebook cũng như những trải nghiệm của sinh viên đối với nguồn thông tin trên nền tảng này. Mọi câu trả lời đều được bảo mật và chỉ phục vụ mục đích nghiên cứu. Cảm ơn bạn đã dành khoảng 2 phút hỗ trợ!
+          </p>
+          <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <span><span class="text-red-500 font-bold">*</span> Biểu thị câu hỏi bắt buộc</span>
+            <span id="progress-text" class="font-semibold text-fb-600">Đã hoàn thành: 0/15 câu (0%)</span>
+          </div>
+        </div>
       </div>
 
-      <div class="mt-7 flex items-center justify-between gap-3">
-        <button type="button" id="btn-prev" class="hidden px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
-          ← Quay lại
+      <!-- Thanh điều hướng các Phần (Step Indicator) -->
+      <div class="grid grid-cols-3 gap-2 sm:gap-3">
+        <button type="button" onclick="goToSection(1)" id="step-btn-1" class="p-3 rounded-xl border text-left transition-all bg-white border-fb-500 ring-2 ring-fb-500/20 shadow-sm">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-fb-600">Phần 1 / 3</div>
+          <div class="text-xs sm:text-sm font-semibold text-slate-900 truncate mt-0.5">Thông tin chung</div>
         </button>
-        <div class="flex-1"></div>
-        <button type="button" id="btn-next" class="px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-sm transition">
-          Tiếp theo →
+        <button type="button" onclick="goToSection(2)" id="step-btn-2" class="p-3 rounded-xl border text-left transition-all bg-white/70 border-slate-200 hover:bg-white">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Phần 2 / 3</div>
+          <div class="text-xs sm:text-sm font-semibold text-slate-700 truncate mt-0.5">Thói quen sử dụng</div>
         </button>
-        <button type="submit" id="btn-submit" class="hidden px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-sm transition flex items-center gap-2">
-          <span id="submit-text">Gửi khảo sát</span>
-          <svg id="submit-spinner" class="hidden animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+        <button type="button" onclick="goToSection(3)" id="step-btn-3" class="p-3 rounded-xl border text-left transition-all bg-white/70 border-slate-200 hover:bg-white">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Phần 3 / 3</div>
+          <div class="text-xs sm:text-sm font-semibold text-slate-700 truncate mt-0.5">Tin giả & Giải pháp</div>
         </button>
       </div>
-    </form>
 
-    <div id="success-screen" class="hidden bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 text-center shadow-sm fade-in">
-      <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">✓</div>
-      <h2 class="text-xl font-bold text-slate-900 mb-2">Cảm ơn bạn đã hoàn thành khảo sát!</h2>
-      <p class="text-sm text-slate-600 mb-6">Câu trả lời của bạn đã được ghi nhận thành công vào hệ thống nghiên cứu.</p>
+      <!-- Form chính chứa 3 phần -->
+      <form id="survey-form" novalidate>
+        <div id="sections-wrapper" class="space-y-5"></div>
 
-      <div id="quick-insight" class="text-left bg-slate-50 rounded-xl p-4 border border-slate-200 mb-6 text-sm text-slate-700 space-y-1.5"></div>
+        <!-- Thanh nút điều hướng Phần / Gửi Form -->
+        <div class="mt-6 flex flex-wrap items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <button type="button" id="prev-btn" onclick="prevSection()" class="hidden px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 active:scale-[0.98] transition-all">
+            <i class="fa-solid fa-arrow-left mr-1.5"></i>Quay lại
+          </button>
 
-      <button type="button" onclick="location.reload()" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
-        Gửi phản hồi khác
-      </button>
-    </div>
+          <div class="flex items-center gap-3 ml-auto">
+            <button type="button" onclick="resetFormConfirm()" class="px-3.5 py-2.5 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 text-xs sm:text-sm font-medium transition-colors">
+              Xóa câu trả lời
+            </button>
+
+            <button type="button" id="next-btn" onclick="nextSection()" class="px-6 py-2.5 rounded-xl bg-fb-500 hover:bg-fb-600 text-white font-semibold text-sm shadow-sm hover:shadow active:scale-[0.98] transition-all">
+              Tiếp theo <i class="fa-solid fa-arrow-right ml-1.5"></i>
+            </button>
+
+            <button type="submit" id="submit-btn" class="hidden px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm hover:shadow active:scale-[0.98] transition-all flex items-center gap-2">
+              <i id="submit-icon" class="fa-solid fa-paper-plane"></i>
+              <span id="submit-text">Gửi khảo sát</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: MÀN HÌNH CẢM ƠN & ĐÁNH GIÁ NHANH   -->
+    <!-- ========================================== -->
+    <section id="view-thankyou" class="hidden space-y-5">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="h-3 bg-emerald-500"></div>
+        <div class="p-6 sm:p-8 text-center">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-3xl">
+            <i class="fa-solid fa-check"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-900 mb-2">Đã ghi nhận câu trả lời của bạn!</h2>
+          <p class="text-slate-600 text-sm sm:text-base max-w-lg mx-auto">
+            Cảm ơn bạn đã dành thời gian tham gia khảo sát. Dữ liệu của bạn đã được lưu vào hệ thống nghiên cứu.
+          </p>
+        </div>
+
+        <!-- Tóm tắt kết quả cá nhân hóa -->
+        <div id="personal-summary" class="mx-6 sm:mx-8 mb-6 p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4"></div>
+
+        <div class="px-6 sm:px-8 pb-8 flex flex-wrap items-center justify-center gap-3">
+          <button onclick="startNewResponse()" class="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all">
+            <i class="fa-solid fa-rotate-right mr-1.5"></i>Gửi phản hồi khác
+          </button>
+          <button id="thankyou-stats-btn" onclick="switchTab('stats')" class="hidden px-5 py-2.5 rounded-xl bg-fb-500 hover:bg-fb-600 text-white font-semibold text-sm shadow-sm transition-all">
+            <i class="fa-solid fa-chart-column mr-1.5"></i>Xem thống kê tổng hợp
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: THỐNG KÊ & XUẤT EXCEL (?admin=1)   -->
+    <!-- ========================================== -->
+    <section id="view-stats" class="hidden space-y-5">
+      <!-- Bảng điều khiển xuất dữ liệu -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900">Tổng hợp kết quả khảo sát</h2>
+            <span id="stats-total-count" class="px-2.5 py-0.5 rounded-full bg-fb-100 text-fb-700 text-xs font-bold">0 phản hồi</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">
+            Đồng bộ trực tiếp từ Google Sheets. Xuất file Excel (.xlsx) chuẩn định dạng để phân tích / chạy SPSS.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="fetchResponsesFromSheet(true)" class="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all">
+            <i class="fa-solid fa-arrows-rotate mr-1 text-fb-500"></i>Làm mới
+          </button>
+          <button onclick="exportExcel()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all">
+            <i class="fa-solid fa-file-excel mr-1.5"></i>Xuất Excel (.xlsx)
+          </button>
+          <button onclick="exportJSON()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow-sm transition-all">
+            <i class="fa-solid fa-code mr-1"></i>JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading state khi kéo data từ Google Sheets -->
+      <div id="stats-loading" class="hidden bg-white rounded-2xl p-12 border border-slate-200 shadow-sm text-center">
+        <i class="fa-solid fa-circle-notch fa-spin text-3xl text-fb-500 mb-3"></i>
+        <p class="text-sm font-medium text-slate-600">Đang đồng bộ dữ liệu từ Google Sheets...</p>
+      </div>
+
+      <!-- Danh sách biểu đồ từng câu hỏi -->
+      <div id="charts-container" class="space-y-4"></div>
+    </section>
+
   </main>
 
-  <!-- GIAO DIỆN 2: DASHBOARD ADMIN (?admin=1) -->
-  <main id="admin-view" class="hidden flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:py-8 fade-in">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-      <div>
-        <span class="inline-block text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-md mb-1">Chế độ Quản trị viên</span>
-        <h2 class="text-lg font-bold text-slate-900">Thống kê dữ liệu khảo sát trực tuyến</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Đồng bộ trực tiếp từ Google Sheets</p>
+  <!-- Footer -->
+  <footer class="py-6 text-center text-xs text-slate-400">
+    Biểu mẫu Khảo sát Nghiên cứu Sinh viên • Kết nối Google Sheets trực tuyến
+  </footer>
+
+  <!-- Modal xác nhận xóa câu trả lời -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
+      <div class="w-11 h-11 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4 text-lg">
+        <i class="fa-solid fa-trash-can"></i>
       </div>
-      <div class="flex flex-wrap items-center gap-2.5">
-        <button onclick="loadAdminData()" class="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition">
-          ↻ Làm mới
-        </button>
-        <button onclick="exportToExcel()" id="btn-export-xlsx" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 shadow-sm transition flex items-center gap-1.5">
-          <span>📥 Xuất file Excel (.xlsx)</span>
-        </button>
-        <a href="?" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition">
-          Về Form
-        </a>
+      <h3 class="text-lg font-bold text-slate-900 mb-1">Xóa toàn bộ câu trả lời?</h3>
+      <p class="text-sm text-slate-600 mb-5">Tất cả lựa chọn bạn vừa điền trong biểu mẫu này sẽ bị đặt lại về ban đầu.</p>
+      <div class="flex justify-end gap-2.5">
+        <button onclick="closeConfirmModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50">Hủy</button>
+        <button onclick="executeResetForm()" class="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700">Xóa hết</button>
       </div>
     </div>
-
-    <!-- Loading state -->
-    <div id="admin-loading" class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-      <div class="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3"></div>
-      <p class="text-sm font-medium text-slate-600">Đang tải dữ liệu từ Google Sheets...</p>
-    </div>
-
-    <!-- Nội dung thống kê -->
-    <div id="admin-content" class="hidden space-y-6">
-      <!-- Thẻ tổng quan -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <p class="text-xs text-slate-500 font-medium">Tổng số phản hồi</p>
-          <p class="text-2xl font-bold text-blue-600 mt-1" id="stat-total">0</p>
-        </div>
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <p class="text-xs text-slate-500 font-medium">TB Lãng phí thời gian</p>
-          <p class="text-2xl font-bold text-amber-600 mt-1" id="stat-q7">0 / 5</p>
-        </div>
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <p class="text-xs text-slate-500 font-medium">TB Gặp tin giả</p>
-          <p class="text-2xl font-bold text-rose-600 mt-1" id="stat-q8">0 / 5</p>
-        </div>
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <p class="text-xs text-slate-500 font-medium">TB Sẵn sàng áp dụng</p>
-          <p class="text-2xl font-bold text-emerald-600 mt-1" id="stat-q14">0 / 5</p>
-        </div>
-      </div>
-
-      <!-- Biểu đồ từng câu hỏi -->
-      <div id="charts-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-
-      <!-- Bảng dữ liệu thô mới nhất -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h3 class="text-sm font-bold text-slate-900">Dữ liệu chi tiết gần nhất</h3>
-          <span class="text-xs text-slate-500" id="table-count">0 bản ghi</span>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
-                <th class="p-3 font-semibold whitespace-nowrap">Thời gian</th>
-                <th class="p-3 font-semibold whitespace-nowrap">Năm học</th>
-                <th class="p-3 font-semibold whitespace-nowrap">Giới tính</th>
-                <th class="p-3 font-semibold whitespace-nowrap">Số nhóm</th>
-                <th class="p-3 font-semibold whitespace-nowrap">Thời lượng</th>
-                <th class="p-3 font-semibold whitespace-nowrap">Lãng phí</th>
-                <th class="p-3 font-semibold whitespace-nowrap">Tin giả</th>
-                <th class="p-3 font-semibold whitespace-nowrap">Sẵn sàng</th>
-                <th class="p-3 font-semibold whitespace-nowrap">Giải pháp chọn</th>
-              </tr>
-            </thead>
-            <tbody id="raw-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </main>
+  </div>
 
   <script>
     // =========================================================================
@@ -181,43 +246,101 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzlCWumyQiM0B761MLYsG3BjUpt_m6gDl2rmWT-vZwKfG1s7sxBTu9Nh4lKRg-JhaAN/exec';
     // =========================================================================
 
-    const SECTIONS = [
+    // Kiểm tra chế độ Admin qua tham số URL (?admin=1)
+    const IS_ADMIN = new URLSearchParams(window.location.search).get('admin') === '1';
+
+    // =========================================================================
+    // 1. CẤU TRÚC DỮ LIỆU 15 CÂU HỎI KHẢO SÁT
+    // =========================================================================
+    const SURVEY_SECTIONS = [
       {
-        title: 'Phần 1 / 3 • Thông tin chung',
+        id: 1,
+        title: 'Phần 1: Thông tin chung',
+        description: 'Phần này giúp phân loại nhóm đối tượng khảo sát.',
         questions: [
           {
-            id: 'q1', type: 'radio',
-            title: '1. Bạn hiện đang là sinh viên năm thứ mấy?',
-            options: ['Năm 1', 'Năm 2', 'Năm 3', 'Năm 4', 'Sau đại học (Cao học / Nghiên cứu sinh)']
+            id: 'q1',
+            number: 1,
+            text: 'Bạn hiện đang là sinh viên năm thứ mấy?',
+            type: 'radio',
+            required: true,
+            options: [
+              'Năm 1',
+              'Năm 2',
+              'Năm 3',
+              'Năm 4',
+              'Sau đại học (Cao học / Nghiên cứu sinh)'
+            ]
           },
           {
-            id: 'q2', type: 'radio',
-            title: '2. Giới tính của bạn là gì?',
-            options: ['Nam', 'Nữ', 'Khác / Không muốn tiết lộ']
+            id: 'q2',
+            number: 2,
+            text: 'Giới tính của bạn là gì?',
+            type: 'radio',
+            required: true,
+            options: [
+              'Nam',
+              'Nữ',
+              'Khác / Không muốn tiết lộ'
+            ]
           }
         ]
       },
       {
-        title: 'Phần 2 / 3 • Thói quen sử dụng hội nhóm',
+        id: 2,
+        title: 'Phần 2: Thói quen sử dụng hội nhóm Facebook',
+        description: 'Phần này đo lường mức độ tương tác và mục đích sử dụng.',
         questions: [
           {
-            id: 'q3', type: 'radio',
-            title: '3. Bạn hiện đang tham gia khoảng bao nhiêu hội nhóm trên Facebook?',
-            options: ['Dưới 3 nhóm', 'Từ 3 – 5 nhóm', 'Từ 6 – 10 nhóm', 'Trên 10 nhóm']
+            id: 'q3',
+            number: 3,
+            text: 'Bạn hiện đang tham gia khoảng bao nhiêu hội nhóm trên Facebook?',
+            type: 'radio',
+            required: true,
+            options: [
+              'Dưới 3 nhóm',
+              'Từ 3 – 5 nhóm',
+              'Từ 6 – 10 nhóm',
+              'Trên 10 nhóm'
+            ]
           },
           {
-            id: 'q4', type: 'radio',
-            title: '4. Trung bình mỗi ngày, bạn dành bao nhiêu thời gian để lướt/xem nội dung trong các hội nhóm?',
-            options: ['Dưới 15 phút', 'Từ 15 – 30 phút', 'Từ 30 – 60 phút', 'Từ 1 – 2 giờ', 'Trên 2 giờ']
+            id: 'q4',
+            number: 4,
+            text: 'Trung bình mỗi ngày, bạn dành bao nhiêu thời gian để lướt/xem nội dung trong các hội nhóm?',
+            type: 'radio',
+            required: true,
+            options: [
+              'Dưới 15 phút',
+              'Từ 15 – 30 phút',
+              'Từ 30 – 60 phút',
+              'Từ 1 – 2 giờ',
+              'Trên 2 giờ'
+            ]
           },
           {
-            id: 'q5', type: 'checkbox',
-            title: '5. Bạn thường truy cập các hội nhóm vào khung giờ nào trong ngày? (Chọn nhiều)',
-            options: ['Sáng (6h – 11h)', 'Trưa (11h – 14h)', 'Chiều (14h – 18h)', 'Tối (18h – 23h)', 'Khuya (Sau 23h)']
+            id: 'q5',
+            number: 5,
+            text: 'Bạn thường truy cập các hội nhóm vào khung giờ nào trong ngày?',
+            subtext: 'Có thể chọn nhiều đáp án',
+            type: 'checkbox',
+            required: true,
+            options: [
+              'Sáng (6h – 11h)',
+              'Trưa (11h – 14h)',
+              'Chiều (14h – 18h)',
+              'Tối (18h – 23h)',
+              'Khuya (Sau 23h)'
+            ]
           },
           {
-            id: 'q6', type: 'checkbox', hasOther: true,
-            title: '6. Mục đích chính khi bạn tham gia các hội nhóm là gì? (Chọn nhiều)',
+            id: 'q6',
+            number: 6,
+            text: 'Mục đích chính khi bạn tham gia các hội nhóm là gì?',
+            subtext: 'Có thể chọn nhiều đáp án',
+            type: 'checkbox',
+            hasOther: true,
+            required: true,
             options: [
               'Học tập / Trao đổi tài liệu',
               'Tìm kiếm việc làm / Thực tập',
@@ -228,23 +351,41 @@
             ]
           },
           {
-            id: 'q7', type: 'scale',
-            title: '7. Bạn có cảm thấy mình đang lãng phí thời gian khi lướt các hội nhóm không?',
-            minLabel: 'Hoàn toàn không', maxLabel: 'Rất thường xuyên'
+            id: 'q7',
+            number: 7,
+            text: 'Bạn có cảm thấy mình đang lãng phí thời gian khi lướt các hội nhóm không?',
+            type: 'scale',
+            required: true,
+            min: 1,
+            max: 5,
+            minLabel: 'Hoàn toàn không',
+            maxLabel: 'Rất thường xuyên'
           }
         ]
       },
       {
-        title: 'Phần 3 / 3 • Trải nghiệm thông tin & Giải pháp',
+        id: 3,
+        title: 'Phần 3: Trải nghiệm thông tin & Nhu cầu giải pháp',
+        description: 'Phần này đánh giá tác động của tin giả và mức độ sẵn sàng thay đổi.',
         questions: [
           {
-            id: 'q8', type: 'scale',
-            title: '8. Tần suất bạn bắt gặp thông tin sai lệch / tin giả trong các hội nhóm là bao nhiêu?',
-            minLabel: 'Hiếm khi', maxLabel: 'Rất thường xuyên'
+            id: 'q8',
+            number: 8,
+            text: 'Tần suất bạn bắt gặp thông tin sai lệch / tin giả trong các hội nhóm là bao nhiêu?',
+            type: 'scale',
+            required: true,
+            min: 1,
+            max: 5,
+            minLabel: 'Hiếm khi',
+            maxLabel: 'Rất thường xuyên'
           },
           {
-            id: 'q9', type: 'checkbox',
-            title: '9. Những vấn đề nào bạn thường gặp nhất khi sử dụng hội nhóm? (Chọn nhiều)',
+            id: 'q9',
+            number: 9,
+            text: 'Những vấn đề nào bạn thường gặp nhất khi sử dụng hội nhóm?',
+            subtext: 'Có thể chọn nhiều đáp án',
+            type: 'checkbox',
+            required: true,
             options: [
               'Lãng phí thời gian, khó dứt ra được',
               'Thông tin sai lệch, chưa được kiểm chứng',
@@ -255,23 +396,48 @@
             ]
           },
           {
-            id: 'q10', type: 'radio',
-            title: '10. Bạn đã từng tin hoặc chia sẻ nhầm thông tin sai lệch từ hội nhóm chưa?',
-            options: ['Có, đã từng', 'Chưa bao giờ', 'Không chắc chắn']
+            id: 'q10',
+            number: 10,
+            text: 'Bạn đã từng tin hoặc chia sẻ nhầm thông tin sai lệch từ hội nhóm chưa?',
+            type: 'radio',
+            required: true,
+            options: [
+              'Có, đã từng',
+              'Chưa bao giờ',
+              'Không chắc chắn'
+            ]
           },
           {
-            id: 'q11', type: 'radio',
-            title: '11. Bạn có đang áp dụng công cụ hay quy tắc nào để tự kiểm soát thời gian lướt hội nhóm không?',
-            options: ['Có, và sử dụng thường xuyên', 'Có, nhưng ít khi tuân thủ', 'Chưa từng áp dụng bao giờ']
+            id: 'q11',
+            number: 11,
+            text: 'Bạn có đang áp dụng công cụ hay quy tắc nào để tự kiểm soát thời gian lướt hội nhóm không?',
+            type: 'radio',
+            required: true,
+            options: [
+              'Có, và sử dụng thường xuyên',
+              'Có, nhưng ít khi tuân thủ',
+              'Chưa từng áp dụng bao giờ'
+            ]
           },
           {
-            id: 'q12', type: 'radio',
-            title: '12. Bạn có biết cách kiểm chứng độ xác thực của thông tin trước khi tin hoặc chia sẻ không?',
-            options: ['Biết rõ và thực hiện thường xuyên', 'Biết một chút nhưng chưa thành thạo', 'Chưa biết cách kiểm chứng']
+            id: 'q12',
+            number: 12,
+            text: 'Bạn có biết cách kiểm chứng độ xác thực của thông tin trước khi tin hoặc chia sẻ không?',
+            type: 'radio',
+            required: true,
+            options: [
+              'Biết rõ và thực hiện thường xuyên',
+              'Biết một chút nhưng chưa thành thạo',
+              'Chưa biết cách kiểm chứng'
+            ]
           },
           {
-            id: 'q13', type: 'checkbox',
-            title: '13. Điều gì khiến bạn khó từ bỏ thói quen lướt hội nhóm? (Chọn nhiều)',
+            id: 'q13',
+            number: 13,
+            text: 'Điều gì khiến bạn khó từ bỏ thói quen lướt hội nhóm?',
+            subtext: 'Có thể chọn nhiều đáp án',
+            type: 'checkbox',
+            required: true,
             options: [
               'Nội dung cuốn hút, đánh trúng tâm lý',
               'Hội chứng sợ bỏ lỡ (FOMO) tin tức/drama',
@@ -281,13 +447,22 @@
             ]
           },
           {
-            id: 'q14', type: 'scale',
-            title: '14. Nếu có một bộ quy tắc hoặc checklist giúp sử dụng hội nhóm hiệu quả và an toàn hơn, bạn sẵn sàng áp dụng ở mức độ nào?',
-            minLabel: 'Hoàn toàn không sẵn sàng', maxLabel: 'Rất sẵn sàng'
+            id: 'q14',
+            number: 14,
+            text: 'Nếu có một bộ quy tắc hoặc checklist giúp sử dụng hội nhóm hiệu quả và an toàn hơn, bạn sẵn sàng áp dụng ở mức độ nào?',
+            type: 'scale',
+            required: true,
+            min: 1,
+            max: 5,
+            minLabel: 'Hoàn toàn không sẵn sàng',
+            maxLabel: 'Rất sẵn sàng'
           },
           {
-            id: 'q15', type: 'radio',
-            title: '15. Bạn mong muốn giải pháp hỗ trợ nào nhất trong số các gợi ý dưới đây?',
+            id: 'q15',
+            number: 15,
+            text: 'Bạn mong muốn giải pháp hỗ trợ nào nhất trong số các gợi ý dưới đây?',
+            type: 'radio',
+            required: true,
             options: [
               'Bộ quy tắc tự quản lý thời gian cá nhân',
               'Checklist hướng dẫn kiểm chứng thông tin nhanh',
@@ -300,345 +475,735 @@
       }
     ];
 
-    // Kiểm tra chế độ Admin qua URL (?admin=1)
-    const isAdmin = new URLSearchParams(window.location.search).get('admin') === '1';
-    let fetchedRows = [];
+    // =========================================================================
+    // 2. QUẢN LÝ TRẠNG THÁI (STATE) & ĐỒNG BỘ GOOGLE SHEETS
+    // =========================================================================
+    let currentSection = 1;
+    let formAnswers = {};
+    let otherChecked = false;
+    let otherText = '';
+    let sheetResponses = []; // Dữ liệu thật kéo về từ Google Sheets
 
-    if (isAdmin) {
-      document.getElementById('survey-view').classList.add('hidden');
-      document.getElementById('progress-wrapper').classList.add('hidden');
-      document.getElementById('header-right').innerHTML = `<span class="text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full">Admin Dashboard</span>`;
-      document.getElementById('step-indicator').textContent = 'Bảng tổng hợp & Xuất Excel';
-      document.getElementById('admin-view').classList.remove('hidden');
-      loadAdminData();
-    } else {
-      initSurvey();
-    }
-
-    // ==================== LOGIC FORM KHẢO SÁT ====================
-    let currentStep = 0;
-    const answers = {};
-
-    function initSurvey() {
-      renderStep();
-
-      document.getElementById('btn-next').addEventListener('click', () => {
-        if (validateCurrentStep()) {
-          currentStep++;
-          renderStep();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      });
-
-      document.getElementById('btn-prev').addEventListener('click', () => {
-        currentStep--;
-        renderStep();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-
-      document.getElementById('survey-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!validateCurrentStep()) return;
-
-        const payload = { ...answers };
-        if (payload.q6_other && payload.q6_other.trim()) {
-          payload.q6 = [...(payload.q6 || []), `Khác: ${payload.q6_other.trim()}`];
-        }
-
-        const submitBtn = document.getElementById('btn-submit');
-        const submitText = document.getElementById('submit-text');
-        const spinner = document.getElementById('submit-spinner');
-
-        submitBtn.disabled = true;
-        submitText.textContent = 'Đang gửi dữ liệu...';
-        spinner.classList.remove('hidden');
-
-        try {
-          if (SCRIPT_URL && SCRIPT_URL.startsWith('https://')) {
-            await fetch(SCRIPT_URL, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify(payload)
-            });
-          }
-
-          document.getElementById('survey-form').classList.add('hidden');
-          document.getElementById('intro-card').classList.add('hidden');
-          document.getElementById('success-screen').classList.remove('hidden');
-
-          document.getElementById('quick-insight').innerHTML = `
-            <p class="font-semibold text-slate-900">Tóm tắt nhanh phản hồi của bạn:</p>
-            <p>• Thời lượng sử dụng: <strong>${payload.q4}</strong> (${payload.q3})</p>
-            <p>• Mức độ cảm thấy lãng phí thời gian: <strong>${payload.q7}/5</strong></p>
-            <p>• Tần suất gặp tin sai lệch: <strong>${payload.q8}/5</strong></p>
-          `;
-        } catch (err) {
-          alert('Có lỗi kết nối mạng, vui lòng thử bấm gửi lại nhé!');
-          submitBtn.disabled = false;
-          submitText.textContent = 'Gửi khảo sát';
-          spinner.classList.add('hidden');
-        }
-      });
-    }
-
-    function renderStep() {
-      const section = SECTIONS[currentStep];
-      const pct = Math.round(((currentStep + 1) / SECTIONS.length) * 100);
-      document.getElementById('step-indicator').textContent = section.title;
-      document.getElementById('progress-bar').style.width = `${pct}%`;
-      document.getElementById('progress-text').textContent = `${pct}%`;
-
-      document.getElementById('btn-prev').classList.toggle('hidden', currentStep === 0);
-      document.getElementById('btn-next').classList.toggle('hidden', currentStep === SECTIONS.length - 1);
-      document.getElementById('btn-submit').classList.toggle('hidden', currentStep !== SECTIONS.length - 1);
-      document.getElementById('error-banner').classList.add('hidden');
-
-      const container = document.getElementById('questions-container');
-      container.innerHTML = section.questions.map(q => {
-        let inputHTML = '';
-
-        if (q.type === 'radio' || q.type === 'checkbox') {
-          inputHTML = `<div class="space-y-2.5 mt-3">` + q.options.map(opt => {
-            const isChecked = q.type === 'radio'
-              ? answers[q.id] === opt
-              : Array.isArray(answers[q.id]) && answers[q.id].includes(opt);
-            return `
-              <label class="block cursor-pointer">
-                <input type="${q.type}" name="${q.id}" value="${opt}" class="sr-only" ${isChecked ? 'checked' : ''} onchange="handleInput('${q.id}', '${q.type}', this)">
-                <div class="option-card flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-blue-300 transition text-sm font-medium">
-                  <span class="w-4 h-4 flex-shrink-0 border border-slate-400 ${q.type === 'radio' ? 'rounded-full' : 'rounded'} flex items-center justify-center text-[10px]">
-                    ${isChecked ? '●' : ''}
-                  </span>
-                  <span>${opt}</span>
-                </div>
-              </label>
-            `;
-          }).join('');
-
-          if (q.hasOther) {
-            const otherVal = answers[q.id + '_other'] || '';
-            inputHTML += `
-              <div class="pt-1">
-                <input type="text" placeholder="Mục khác (nhập nếu có)..." value="${otherVal}"
-                  oninput="answers['${q.id}_other'] = this.value"
-                  class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500" />
-              </div>
-            `;
-          }
-          inputHTML += `</div>`;
-        } else if (q.type === 'scale') {
-          inputHTML = `
-            <div class="mt-4">
-              <div class="grid grid-cols-5 gap-2 sm:gap-3">
-                ${[1, 2, 3, 4, 5].map(num => {
-                  const isChecked = Number(answers[q.id]) === num;
-                  return `
-                    <label class="cursor-pointer text-center">
-                      <input type="radio" name="${q.id}" value="${num}" class="sr-only" ${isChecked ? 'checked' : ''} onchange="handleInput('${q.id}', 'scale', this)">
-                      <div class="scale-btn py-3 rounded-xl border border-slate-200 font-bold text-sm hover:border-blue-400 transition">
-                        ${num}
-                      </div>
-                    </label>
-                  `;
-                }).join('')}
-              </div>
-              <div class="flex justify-between text-xs text-slate-500 mt-2 px-1">
-                <span>1 = ${q.minLabel}</span>
-                <span>5 = ${q.maxLabel}</span>
-              </div>
-            </div>
-          `;
-        }
-
-        return `
-          <div id="card-${q.id}" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm transition">
-            <h3 class="text-sm sm:text-base font-semibold text-slate-900 leading-snug">
-              ${q.title} <span class="text-red-500">*</span>
-            </h3>
-            ${inputHTML}
-          </div>
-        `;
-      }).join('');
-    }
-
-    function handleInput(qId, type, el) {
-      if (type === 'radio' || type === 'scale') {
-        answers[qId] = el.value;
-      } else if (type === 'checkbox') {
-        if (!Array.isArray(answers[qId])) answers[qId] = [];
-        if (el.checked) {
-          if (!answers[qId].includes(el.value)) answers[qId].push(el.value);
-        } else {
-          answers[qId] = answers[qId].filter(v => v !== el.value);
-        }
+    async function fetchResponsesFromSheet(showNotify = false) {
+      if (!SCRIPT_URL || !SCRIPT_URL.startsWith('https://')) {
+        if (showNotify) showToast('Bạn chưa dán link SCRIPT_URL của Google Apps Script!', 'error');
+        return [];
       }
-      document.getElementById(`card-${qId}`).classList.remove('border-red-400', 'bg-red-50/30');
-      renderStep();
-    }
 
-    function validateCurrentStep() {
-      const section = SECTIONS[currentStep];
-      let valid = true;
-      for (const q of section.questions) {
-        const val = answers[q.id];
-        const other = answers[q.id + '_other'];
-        const isEmpty = q.type === 'checkbox'
-          ? (!Array.isArray(val) || val.length === 0) && (!other || !other.trim())
-          : !val;
-
-        const card = document.getElementById(`card-${q.id}`);
-        if (isEmpty) {
-          card.classList.add('border-red-400', 'bg-red-50/30');
-          valid = false;
-        } else {
-          card.classList.remove('border-red-400', 'bg-red-50/30');
-        }
+      const loadingEl = document.getElementById('stats-loading');
+      const chartsEl = document.getElementById('charts-container');
+      if (loadingEl && !document.getElementById('view-stats').classList.contains('hidden')) {
+        loadingEl.classList.remove('hidden');
+        chartsEl.classList.add('hidden');
       }
-      document.getElementById('error-banner').classList.toggle('hidden', valid);
-      return valid;
-    }
-
-    // ==================== LOGIC ADMIN & XUẤT EXCEL ====================
-    async function loadAdminData() {
-      const loadingEl = document.getElementById('admin-loading');
-      const contentEl = document.getElementById('admin-content');
-      loadingEl.classList.remove('hidden');
-      contentEl.classList.add('hidden');
 
       try {
         const res = await fetch(SCRIPT_URL);
         const json = await res.json();
-        fetchedRows = json.data || [];
-        renderDashboard(fetchedRows);
-        loadingEl.classList.add('hidden');
-        contentEl.classList.remove('hidden');
-      } catch (err) {
-        loadingEl.innerHTML = `
-          <p class="text-sm font-semibold text-red-600 mb-2">Không tải được dữ liệu từ Google Sheets!</p>
-          <p class="text-xs text-slate-500">Hãy kiểm tra xem bạn đã cập nhật hàm <code>doGet(e)</code> và chọn <b>New version</b> khi Deploy Apps Script chưa nhé.</p>
-        `;
-      }
-    }
+        const rawList = json.data || [];
 
-    function calcAvg(rows, key) {
-      if (!rows.length) return '0.0';
-      const valid = rows.map(r => Number(r[key])).filter(n => !isNaN(n) && n > 0);
-      if (!valid.length) return '0.0';
-      return (valid.reduce((a, b) => a + b, 0) / valid.length).toFixed(1);
-    }
-
-    function renderDashboard(rows) {
-      document.getElementById('stat-total').textContent = rows.length;
-      document.getElementById('stat-q7').textContent = `${calcAvg(rows, 'q7')} / 5`;
-      document.getElementById('stat-q8').textContent = `${calcAvg(rows, 'q8')} / 5`;
-      document.getElementById('stat-q14').textContent = `${calcAvg(rows, 'q14')} / 5`;
-      document.getElementById('table-count').textContent = `${rows.length} bản ghi`;
-
-      // Render biểu đồ thanh ngang cho toàn bộ 15 câu
-      const allQuestions = SECTIONS.flatMap(s => s.questions);
-      const chartsContainer = document.getElementById('charts-container');
-
-      chartsContainer.innerHTML = allQuestions.map(q => {
-        const counts = {};
-        if (q.type === 'scale') {
-          ['1', '2', '3', '4', '5'].forEach(k => counts[k] = 0);
-        } else {
-          q.options.forEach(opt => counts[opt] = 0);
-        }
-
-        rows.forEach(r => {
-          const raw = r[q.id];
-          if (!raw) return;
-          if (q.type === 'checkbox') {
-            raw.split('; ').forEach(item => {
-              const clean = item.trim();
-              if (clean) counts[clean] = (counts[clean] || 0) + 1;
-            });
-          } else {
-            counts[raw] = (counts[raw] || 0) + 1;
-          }
+        // Chuẩn hóa dữ liệu checkbox từ chuỗi "A; B" thành mảng ['A', 'B'] để vẽ biểu đồ
+        sheetResponses = rawList.map(row => {
+          const item = { ...row };
+          ['q5', 'q6', 'q9', 'q13'].forEach(qKey => {
+            if (typeof item[qKey] === 'string' && item[qKey].trim() !== '') {
+              item[qKey] = item[qKey].split('; ').map(s => s.trim()).filter(Boolean);
+            } else if (!Array.isArray(item[qKey])) {
+              item[qKey] = [];
+            }
+          });
+          return item;
         });
 
-        const barsHTML = Object.entries(counts).map(([label, count]) => {
-          const pct = rows.length ? Math.round((count / rows.length) * 100) : 0;
-          const displayLabel = q.type === 'scale' ? `Mức ${label}` : label;
-          return `
-            <div>
-              <div class="flex justify-between text-xs mb-1 gap-2">
-                <span class="text-slate-700 font-medium truncate" title="${displayLabel}">${displayLabel}</span>
-                <span class="text-slate-500 font-semibold whitespace-nowrap">${count} (${pct}%)</span>
-              </div>
-              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
-              </div>
-            </div>
-          `;
-        }).join('');
+        updateResponseBadge();
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (chartsEl) chartsEl.classList.remove('hidden');
+        renderStats();
 
-        return `
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-            <h4 class="text-xs font-bold text-slate-900 mb-3.5 leading-relaxed">${q.title}</h4>
-            <div class="space-y-2.5">${barsHTML}</div>
-          </div>
-        `;
-      }).join('');
-
-      // Render bảng dữ liệu mới nhất (đảo ngược để mới nhất lên đầu)
-      const tbody = document.getElementById('raw-table-body');
-      if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">Chưa có dữ liệu nào được gửi.</td></tr>`;
-        return;
+        if (showNotify) showToast(`Đã đồng bộ ${sheetResponses.length} phản hồi từ Google Sheets!`, 'success');
+        return sheetResponses;
+      } catch (err) {
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (chartsEl) chartsEl.classList.remove('hidden');
+        if (showNotify) showToast('Lỗi tải dữ liệu. Kiểm tra lại hàm doGet() trong Apps Script!', 'error');
+        return [];
       }
-
-      tbody.innerHTML = [...rows].reverse().slice(0, 30).map(r => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-3 whitespace-nowrap text-slate-500">${r.timestamp}</td>
-          <td class="p-3 whitespace-nowrap font-medium">${r.q1}</td>
-          <td class="p-3 whitespace-nowrap">${r.q2}</td>
-          <td class="p-3 whitespace-nowrap">${r.q3}</td>
-          <td class="p-3 whitespace-nowrap">${r.q4}</td>
-          <td class="p-3 whitespace-nowrap text-center font-semibold text-amber-600">${r.q7}</td>
-          <td class="p-3 whitespace-nowrap text-center font-semibold text-rose-600">${r.q8}</td>
-          <td class="p-3 whitespace-nowrap text-center font-semibold text-emerald-600">${r.q14}</td>
-          <td class="p-3 max-w-[200px] truncate" title="${r.q15}">${r.q15}</td>
-        </tr>
-      `).join('');
     }
 
-    function exportToExcel() {
-      if (!fetchedRows.length) {
-        alert('Chưa có dữ liệu để xuất file Excel!');
+    function updateResponseBadge() {
+      const count = sheetResponses.length;
+      document.getElementById('response-badge').textContent = count;
+      const statsCount = document.getElementById('stats-total-count');
+      if (statsCount) statsCount.textContent = `${count} phản hồi`;
+    }
+
+    // =========================================================================
+    // 3. RENDER GIAO DIỆN BIỂU MẪU
+    // =========================================================================
+    function renderSurvey() {
+      const wrapper = document.getElementById('sections-wrapper');
+      wrapper.innerHTML = '';
+
+      SURVEY_SECTIONS.forEach((section) => {
+        const sectionEl = document.createElement('div');
+        sectionEl.id = `section-panel-${section.id}`;
+        sectionEl.className = section.id === currentSection ? 'space-y-4 block' : 'space-y-4 hidden';
+
+        sectionEl.innerHTML = `
+          <div class="bg-fb-500 text-white rounded-2xl p-5 sm:p-6 shadow-sm">
+            <div class="text-xs font-semibold uppercase tracking-wider text-fb-100 mb-1">Phần ${section.id} trên 3</div>
+            <h3 class="text-lg sm:text-xl font-bold">${section.title}</h3>
+            <p class="text-sm text-fb-100 mt-1">${section.description}</p>
+          </div>
+        `;
+
+        section.questions.forEach((q) => {
+          const card = document.createElement('div');
+          card.id = `card-${q.id}`;
+          card.className = 'bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm transition-all duration-200';
+
+          let inputHTML = '';
+
+          if (q.type === 'radio') {
+            inputHTML = `<div class="space-y-2.5 mt-4">` + q.options.map((opt) => {
+              const isChecked = formAnswers[q.id] === opt;
+              return `
+                <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none ${
+                  isChecked ? 'border-fb-500 bg-fb-50/70 text-fb-700 font-medium' : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                }">
+                  <input type="radio" name="${q.id}" value="${opt}" ${isChecked ? 'checked' : ''}
+                    onchange="handleRadioChange('${q.id}', '${opt.replace(/'/g, "\\'")}')"
+                    class="w-4 h-4 text-fb-500 border-slate-300 focus:ring-fb-500 cursor-pointer">
+                  <span class="text-sm sm:text-[15px] leading-snug">${opt}</span>
+                </label>
+              `;
+            }).join('') + `</div>`;
+          }
+
+          else if (q.type === 'checkbox') {
+            const selectedArr = formAnswers[q.id] || [];
+            inputHTML = `<div class="space-y-2.5 mt-4">` + q.options.map((opt) => {
+              const isChecked = selectedArr.includes(opt);
+              return `
+                <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none ${
+                  isChecked ? 'border-fb-500 bg-fb-50/70 text-fb-700 font-medium' : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                }">
+                  <input type="checkbox" name="${q.id}" value="${opt}" ${isChecked ? 'checked' : ''}
+                    onchange="handleCheckboxChange('${q.id}', '${opt.replace(/'/g, "\\'")}')"
+                    class="w-4 h-4 rounded text-fb-500 border-slate-300 focus:ring-fb-500 cursor-pointer">
+                  <span class="text-sm sm:text-[15px] leading-snug">${opt}</span>
+                </label>
+              `;
+            }).join('');
+
+            if (q.hasOther) {
+              inputHTML += `
+                <div class="p-3 rounded-xl border transition-all ${
+                  otherChecked ? 'border-fb-500 bg-fb-50/70' : 'border-slate-200 hover:bg-slate-50'
+                }">
+                  <label class="flex items-center gap-3 cursor-pointer select-none">
+                    <input type="checkbox" id="other-checkbox-${q.id}" ${otherChecked ? 'checked' : ''}
+                      onchange="handleOtherToggle('${q.id}', this.checked)"
+                      class="w-4 h-4 rounded text-fb-500 border-slate-300 focus:ring-fb-500 cursor-pointer">
+                    <span class="text-sm sm:text-[15px] text-slate-700 font-medium">Mục khác:</span>
+                  </label>
+                  <input type="text" id="other-input-${q.id}" value="${otherText.replace(/"/g, '&quot;')}"
+                    placeholder="Nhập mục đích khác của bạn..."
+                    oninput="handleOtherInput('${q.id}', this.value)"
+                    onfocus="document.getElementById('other-checkbox-${q.id}').checked = true; handleOtherToggle('${q.id}', true);"
+                    class="mt-2.5 w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-fb-500 focus:ring-2 focus:ring-fb-500/20">
+                </div>
+              `;
+            }
+            inputHTML += `</div>`;
+          }
+
+          else if (q.type === 'scale') {
+            const currentVal = formAnswers[q.id];
+            let buttonsHTML = '';
+            for (let i = q.min; i <= q.max; i++) {
+              const active = currentVal === i;
+              buttonsHTML += `
+                <button type="button" onclick="handleScaleChange('${q.id}', ${i})"
+                  class="flex-1 py-3 sm:py-3.5 rounded-xl border font-bold text-base sm:text-lg transition-all active:scale-95 ${
+                    active
+                      ? 'bg-fb-500 border-fb-500 text-white shadow-md ring-2 ring-fb-500/30'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-fb-50 hover:border-fb-300'
+                  }">
+                  ${i}
+                </button>
+              `;
+            }
+
+            inputHTML = `
+              <div class="mt-5">
+                <div class="flex items-center justify-between text-xs font-medium text-slate-500 mb-2 px-1">
+                  <span>1 = ${q.minLabel}</span>
+                  <span>5 = ${q.maxLabel}</span>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-3">
+                  ${buttonsHTML}
+                </div>
+              </div>
+            `;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h4 class="text-base sm:text-[17px] font-semibold text-slate-900 leading-snug">
+                  <span class="text-fb-600 font-bold mr-1">Câu ${q.number}.</span>${q.text}
+                  ${q.required ? '<span class="text-red-500 ml-1" title="Bắt buộc">*</span>' : ''}
+                </h4>
+                ${q.subtext ? `<p class="text-xs text-slate-500 mt-1">${q.subtext}</p>` : ''}
+              </div>
+            </div>
+            ${inputHTML}
+            <p id="error-${q.id}" class="hidden mt-3 text-xs font-medium text-red-600 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-exclamation"></i> Vui lòng trả lời câu hỏi bắt buộc này
+            </p>
+          `;
+
+          sectionEl.appendChild(card);
+        });
+
+        wrapper.appendChild(sectionEl);
+      });
+
+      updateNavigationUI();
+      updateProgress();
+    }
+
+    // =========================================================================
+    // 4. XỬ LÝ TƯƠNG TÁC CÂU HỎI & TIẾN ĐỘ
+    // =========================================================================
+    function handleRadioChange(qId, value) {
+      formAnswers[qId] = value;
+      clearQuestionError(qId);
+      renderSurvey();
+    }
+
+    function handleCheckboxChange(qId, value) {
+      if (!Array.isArray(formAnswers[qId])) formAnswers[qId] = [];
+      const idx = formAnswers[qId].indexOf(value);
+      if (idx > -1) {
+        formAnswers[qId].splice(idx, 1);
+      } else {
+        formAnswers[qId].push(value);
+      }
+      clearQuestionError(qId);
+      renderSurvey();
+    }
+
+    function handleOtherToggle(qId, checked) {
+      otherChecked = checked;
+      syncOtherValue(qId);
+      clearQuestionError(qId);
+      updateProgress();
+    }
+
+    function handleOtherInput(qId, val) {
+      otherText = val;
+      syncOtherValue(qId);
+      clearQuestionError(qId);
+      updateProgress();
+    }
+
+    function syncOtherValue(qId) {
+      if (!Array.isArray(formAnswers[qId])) formAnswers[qId] = [];
+      formAnswers[qId] = formAnswers[qId].filter(item => !item.startsWith('Khác:'));
+      if (otherChecked) {
+        const label = otherText.trim() ? `Khác: ${otherText.trim()}` : 'Khác: (Chưa ghi rõ)';
+        formAnswers[qId].push(label);
+      }
+    }
+
+    function handleScaleChange(qId, val) {
+      formAnswers[qId] = val;
+      clearQuestionError(qId);
+      renderSurvey();
+    }
+
+    function clearQuestionError(qId) {
+      const card = document.getElementById(`card-${qId}`);
+      const err = document.getElementById(`error-${qId}`);
+      if (card) card.classList.remove('border-red-400', 'ring-2', 'ring-red-100');
+      if (err) err.classList.add('hidden');
+    }
+
+    function isQuestionAnswered(q) {
+      const ans = formAnswers[q.id];
+      if (q.type === 'checkbox') {
+        return Array.isArray(ans) && ans.length > 0;
+      }
+      return ans !== undefined && ans !== null && ans !== '';
+    }
+
+    function updateProgress() {
+      let total = 0;
+      let answered = 0;
+      SURVEY_SECTIONS.forEach(sec => {
+        sec.questions.forEach(q => {
+          total++;
+          if (isQuestionAnswered(q)) answered++;
+        });
+      });
+
+      const pct = Math.round((answered / total) * 100);
+      document.getElementById('progress-bar').style.width = `${pct}%`;
+      document.getElementById('progress-text').textContent = `Đã hoàn thành: ${answered}/${total} câu (${pct}%)`;
+    }
+
+    // =========================================================================
+    // 5. ĐIỀU HƯỚNG GIỮA 3 PHẦN & KIỂM TRA VALIDATE
+    // =========================================================================
+    function validateSection(sectionId) {
+      const section = SURVEY_SECTIONS.find(s => s.id === sectionId);
+      let firstInvalidCard = null;
+      let isValid = true;
+
+      section.questions.forEach(q => {
+        if (q.required && !isQuestionAnswered(q)) {
+          isValid = false;
+          const card = document.getElementById(`card-${q.id}`);
+          const err = document.getElementById(`error-${q.id}`);
+          if (card) {
+            card.classList.add('border-red-400', 'ring-2', 'ring-red-100');
+            if (!firstInvalidCard) firstInvalidCard = card;
+          }
+          if (err) err.classList.remove('hidden');
+        }
+      });
+
+      if (!isValid && firstInvalidCard) {
+        firstInvalidCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('Vui lòng hoàn thành các câu hỏi bắt buộc được đánh dấu đỏ.', 'error');
+      }
+      return isValid;
+    }
+
+    function goToSection(targetSec) {
+      if (targetSec > currentSection) {
+        for (let s = currentSection; s < targetSec; s++) {
+          if (!validateSection(s)) {
+            currentSection = s;
+            renderSurvey();
+            return;
+          }
+        }
+      }
+      currentSection = targetSec;
+      renderSurvey();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function nextSection() {
+      if (validateSection(currentSection)) {
+        if (currentSection < 3) {
+          currentSection++;
+          renderSurvey();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    }
+
+    function prevSection() {
+      if (currentSection > 1) {
+        currentSection--;
+        renderSurvey();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function updateNavigationUI() {
+      [1, 2, 3].forEach(num => {
+        const btn = document.getElementById(`step-btn-${num}`);
+        const label = btn.querySelector('div:first-child');
+        const title = btn.querySelector('div:last-child');
+        if (num === currentSection) {
+          btn.className = 'p-3 rounded-xl border text-left transition-all bg-white border-fb-500 ring-2 ring-fb-500/20 shadow-sm';
+          label.className = 'text-[11px] font-bold uppercase tracking-wider text-fb-600';
+          title.className = 'text-xs sm:text-sm font-semibold text-slate-900 truncate mt-0.5';
+        } else if (num < currentSection) {
+          btn.className = 'p-3 rounded-xl border text-left transition-all bg-emerald-50/60 border-emerald-200 hover:bg-emerald-50';
+          label.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-600';
+          title.className = 'text-xs sm:text-sm font-semibold text-slate-800 truncate mt-0.5';
+        } else {
+          btn.className = 'p-3 rounded-xl border text-left transition-all bg-white/70 border-slate-200 hover:bg-white';
+          label.className = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
+          title.className = 'text-xs sm:text-sm font-semibold text-slate-700 truncate mt-0.5';
+        }
+      });
+
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+      const submitBtn = document.getElementById('submit-btn');
+
+      prevBtn.classList.toggle('hidden', currentSection === 1);
+      nextBtn.classList.toggle('hidden', currentSection === 3);
+      submitBtn.classList.toggle('hidden', currentSection !== 3);
+    }
+
+    // =========================================================================
+    // 6. GỬI KHẢO SÁT LÊN GOOGLE SHEETS & TÓM TẮT CÁ NHÂN HÓA
+    // =========================================================================
+    document.getElementById('survey-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      if (!validateSection(3)) return;
+
+      const submitBtn = document.getElementById('submit-btn');
+      const submitIcon = document.getElementById('submit-icon');
+      const submitText = document.getElementById('submit-text');
+
+      submitBtn.disabled = true;
+      submitIcon.className = 'fa-solid fa-circle-notch fa-spin';
+      submitText.textContent = 'Đang gửi dữ liệu...';
+
+      const payload = JSON.parse(JSON.stringify(formAnswers));
+
+      try {
+        if (SCRIPT_URL && SCRIPT_URL.startsWith('https://')) {
+          await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        renderPersonalSummary(payload);
+        document.getElementById('view-form').classList.add('hidden');
+        document.getElementById('view-thankyou').classList.remove('hidden');
+        document.getElementById('progress-container').classList.add('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('Gửi khảo sát thành công!', 'success');
+
+        if (IS_ADMIN) fetchResponsesFromSheet(false);
+      } catch (err) {
+        showToast('Lỗi kết nối mạng, vui lòng thử bấm gửi lại!', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitIcon.className = 'fa-solid fa-paper-plane';
+        submitText.textContent = 'Gửi khảo sát';
+      }
+    });
+
+    function renderPersonalSummary(record) {
+      const box = document.getElementById('personal-summary');
+      const wasteScore = record.q7 || 3;
+      const fakeNewsFreq = record.q8 || 3;
+
+      let timeBadge = '';
+      if (wasteScore >= 4) {
+        timeBadge = `<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">Mức độ phụ thuộc cao (${wasteScore}/5)</span>`;
+      } else if (wasteScore === 3) {
+        timeBadge = `<span class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">Mức độ trung bình (${wasteScore}/5)</span>`;
+      } else {
+        timeBadge = `<span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">Kiểm soát thời gian tốt (${wasteScore}/5)</span>`;
+      }
+
+      let verifyText = '';
+      if (record.q12 === 'Biết rõ và thực hiện thường xuyên') {
+        verifyText = 'Bạn có kỹ năng sàng lọc và kiểm chứng thông tin rất tốt trên mạng xã hội.';
+      } else if (record.q12 === 'Biết một chút nhưng chưa thành thạo') {
+        verifyText = 'Bạn đã có ý thức kiểm chứng tin tức, nhưng nên trang bị thêm checklist kiểm tra nguồn tin.';
+      } else {
+        verifyText = 'Bạn dễ gặp rủi ro trước tin giả trong các hội nhóm — hãy luôn đối chiếu ít nhất 2 nguồn uy tín trước khi tin/chia sẻ.';
+      }
+
+      box.innerHTML = `
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide">
+            <i class="fa-solid fa-sparkles text-fb-500 mr-1.5"></i>Góc nhìn nhanh từ phản hồi của bạn
+          </h3>
+          ${timeBadge}
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200/70">
+            <div class="text-slate-500 text-xs mb-1">Thời lượng lướt mỗi ngày</div>
+            <div class="font-semibold text-slate-900">${record.q4} (${record.q3})</div>
+          </div>
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200/70">
+            <div class="text-slate-500 text-xs mb-1">Tần suất gặp tin sai lệch</div>
+            <div class="font-semibold text-slate-900">Mức ${fakeNewsFreq}/5 • Giải pháp chọn: ${record.q15}</div>
+          </div>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed bg-white p-3.5 rounded-xl border border-slate-200/70">
+          <i class="fa-solid fa-lightbulb text-amber-500 mr-1.5"></i>${verifyText}
+        </p>
+      `;
+    }
+
+    function startNewResponse() {
+      formAnswers = {};
+      otherChecked = false;
+      otherText = '';
+      currentSection = 1;
+      document.getElementById('view-thankyou').classList.add('hidden');
+      document.getElementById('view-form').classList.remove('hidden');
+      document.getElementById('progress-container').classList.remove('hidden');
+      renderSurvey();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetFormConfirm() {
+      const modal = document.getElementById('confirm-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeConfirmModal() {
+      const modal = document.getElementById('confirm-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function executeResetForm() {
+      closeConfirmModal();
+      formAnswers = {};
+      otherChecked = false;
+      otherText = '';
+      currentSection = 1;
+      renderSurvey();
+      showToast('Đã xóa toàn bộ câu trả lời trong form.', 'info');
+    }
+
+    // =========================================================================
+    // 7. CHUYỂN TAB & THỐNG KÊ BIỂU ĐỒ TRỰC QUAN (ADMIN)
+    // =========================================================================
+    function switchTab(tab) {
+      if (tab === 'stats' && !IS_ADMIN) return;
+
+      const formBtn = document.getElementById('tab-form-btn');
+      const statsBtn = document.getElementById('tab-stats-btn');
+      const viewForm = document.getElementById('view-form');
+      const viewThankyou = document.getElementById('view-thankyou');
+      const viewStats = document.getElementById('view-stats');
+      const progress = document.getElementById('progress-container');
+
+      if (tab === 'form') {
+        formBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white text-fb-600 shadow-sm';
+        statsBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5';
+        viewStats.classList.add('hidden');
+        viewThankyou.classList.add('hidden');
+        viewForm.classList.remove('hidden');
+        progress.classList.remove('hidden');
+      } else {
+        statsBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white text-fb-600 shadow-sm flex items-center gap-1.5';
+        formBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900';
+        viewForm.classList.add('hidden');
+        viewThankyou.classList.add('hidden');
+        viewStats.classList.remove('hidden');
+        progress.classList.add('hidden');
+        fetchResponsesFromSheet(false);
+      }
+    }
+
+    function renderStats() {
+      const responses = sheetResponses;
+      const total = responses.length;
+      document.getElementById('stats-total-count').textContent = `${total} phản hồi`;
+
+      const container = document.getElementById('charts-container');
+      container.innerHTML = '';
+
+      SURVEY_SECTIONS.forEach(section => {
+        section.questions.forEach(q => {
+          const card = document.createElement('div');
+          card.className = 'bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm';
+
+          let chartHTML = '';
+
+          if (q.type === 'radio' || q.type === 'checkbox') {
+            const counts = {};
+            q.options.forEach(opt => counts[opt] = 0);
+
+            responses.forEach(r => {
+              const val = r[q.id];
+              if (Array.isArray(val)) {
+                val.forEach(item => {
+                  if (item.startsWith('Khác:')) {
+                    counts['Mục khác'] = (counts['Mục khác'] || 0) + 1;
+                  } else {
+                    counts[item] = (counts[item] || 0) + 1;
+                  }
+                });
+              } else if (val) {
+                counts[val] = (counts[val] || 0) + 1;
+              }
+            });
+
+            const entries = Object.entries(counts);
+            chartHTML = `<div class="space-y-3 mt-4">` + entries.map(([label, count]) => {
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              return `
+                <div>
+                  <div class="flex justify-between text-xs sm:text-sm mb-1 gap-2">
+                    <span class="text-slate-700 font-medium">${label}</span>
+                    <span class="text-slate-500 font-semibold shrink-0">${count} (${pct}%)</span>
+                  </div>
+                  <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div class="bg-fb-500 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                  </div>
+                </div>
+              `;
+            }).join('') + `</div>`;
+          }
+
+          else if (q.type === 'scale') {
+            const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            let sum = 0;
+            let validCount = 0;
+
+            responses.forEach(r => {
+              const v = Number(r[q.id]);
+              if (v >= 1 && v <= 5) {
+                counts[v]++;
+                sum += v;
+                validCount++;
+              }
+            });
+
+            const avg = validCount > 0 ? (sum / validCount).toFixed(2) : '0.00';
+
+            chartHTML = `
+              <div class="mt-3 mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold">
+                <i class="fa-solid fa-calculator"></i> Điểm trung bình: ${avg} / 5.00
+              </div>
+              <div class="grid grid-cols-5 gap-2 sm:gap-3 items-end pt-2">
+                ${[1, 2, 3, 4, 5].map(num => {
+                  const count = counts[num];
+                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                  return `
+                    <div class="flex flex-col items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                      <span class="text-xs font-bold text-slate-700 mb-1">${count}</span>
+                      <div class="w-full bg-slate-200 h-20 rounded-lg flex items-end overflow-hidden">
+                        <div class="w-full bg-indigo-500 rounded-t-md transition-all duration-500" style="height: ${Math.max(pct, 4)}%"></div>
+                      </div>
+                      <span class="mt-2 text-xs font-bold text-slate-800">Mức ${num}</span>
+                      <span class="text-[10px] text-slate-400">${pct}%</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+              <div class="flex justify-between text-[11px] text-slate-400 mt-2">
+                <span>1: ${q.minLabel}</span>
+                <span>5: ${q.maxLabel}</span>
+              </div>
+            `;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <h4 class="text-sm sm:text-base font-bold text-slate-900">
+                <span class="text-fb-600 mr-1">Câu ${q.number}.</span>${q.text}
+              </h4>
+              <span class="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 shrink-0">
+                ${q.type === 'checkbox' ? 'Chọn nhiều' : q.type === 'scale' ? 'Thang 1-5' : 'Trắc nghiệm'}
+              </span>
+            </div>
+            ${chartHTML}
+          `;
+
+          container.appendChild(card);
+        });
+      });
+    }
+
+    // =========================================================================
+    // 8. XUẤT FILE EXCEL (.XLSX) & JSON
+    // =========================================================================
+    function exportExcel() {
+      if (!sheetResponses.length) {
+        showToast('Chưa có dữ liệu trên Google Sheets để xuất!', 'error');
         return;
       }
 
-      const excelData = fetchedRows.map((r, index) => ({
-        'STT': index + 1,
-        'Thời gian gửi': r.timestamp,
-        'Câu 1: Năm học': r.q1,
-        'Câu 2: Giới tính': r.q2,
-        'Câu 3: Số nhóm tham gia': r.q3,
-        'Câu 4: Thời gian/ngày': r.q4,
-        'Câu 5: Khung giờ': r.q5,
-        'Câu 6: Mục đích': r.q6,
-        'Câu 7: Lãng phí thời gian (1-5)': Number(r.q7) || r.q7,
-        'Câu 8: Tần suất gặp tin giả (1-5)': Number(r.q8) || r.q8,
-        'Câu 9: Vấn đề thường gặp': r.q9,
-        'Câu 10: Từng tin tin giả': r.q10,
-        'Câu 11: Công cụ quản lý': r.q11,
-        'Câu 12: Biết kiểm chứng': r.q12,
-        'Câu 13: Lý do khó bỏ': r.q13,
-        'Câu 14: Mức độ sẵn sàng (1-5)': Number(r.q14) || r.q14,
-        'Câu 15: Giải pháp mong muốn': r.q15
-      }));
+      const excelRows = sheetResponses.map((r, idx) => {
+        const obj = {
+          'STT': idx + 1,
+          'Thời gian gửi': r.timestamp || ''
+        };
+        SURVEY_SECTIONS.forEach(s => s.questions.forEach(q => {
+          const val = r[q.id];
+          const colName = `Câu ${q.number}: ${q.text}`;
+          if (Array.isArray(val)) {
+            obj[colName] = val.join('; ');
+          } else if (q.type === 'scale') {
+            obj[colName] = Number(val) || val || '';
+          } else {
+            obj[colName] = val || '';
+          }
+        }));
+        return obj;
+      });
 
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const worksheet = XLSX.utils.json_to_sheet(excelRows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Du_Lieu_Khao_Sat');
 
       const today = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(workbook, `Khao_Sat_Hoi_Nhom_FB_${today}.xlsx`);
+      showToast('Đã tải xuống file Excel (.xlsx) thành công!', 'success');
     }
+
+    function exportJSON() {
+      if (!sheetResponses.length) {
+        showToast('Chưa có dữ liệu để xuất!', 'error');
+        return;
+      }
+      const blob = new Blob([JSON.stringify(sheetResponses, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Khao_Sat_Hoi_Nhom_FB_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Đã tải xuống dữ liệu định dạng JSON!', 'success');
+    }
+
+    // =========================================================================
+    // 9. THÔNG BÁO TOAST
+    // =========================================================================
+    let toastTimer = null;
+    function showToast(message, type = 'info') {
+      const box = document.getElementById('toast-box');
+      const msg = document.getElementById('toast-msg');
+      const icon = document.getElementById('toast-icon');
+
+      msg.textContent = message;
+      if (type === 'error') {
+        icon.className = 'fa-solid fa-circle-exclamation text-red-400 text-lg';
+      } else if (type === 'success') {
+        icon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+      } else {
+        icon.className = 'fa-solid fa-circle-info text-fb-400 text-lg';
+      }
+
+      box.classList.remove('translate-y-24', 'opacity-0');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        box.classList.add('translate-y-24', 'opacity-0');
+      }, 3200);
+    }
+
+    // Khởi chạy ứng dụng
+    window.addEventListener('DOMContentLoaded', () => {
+      renderSurvey();
+
+      if (IS_ADMIN) {
+        // Bật thanh chuyển tab Điền khảo sát / Thống kê cho Admin
+        const navTabs = document.getElementById('admin-nav-tabs');
+        navTabs.classList.remove('hidden');
+        navTabs.classList.add('flex');
+        document.getElementById('thankyou-stats-btn').classList.remove('hidden');
+
+        // Mở thẳng tab Thống kê khi truy cập ?admin=1
+        switchTab('stats');
+      }
+    });
   </script>
 </body>
 </html>
